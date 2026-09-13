@@ -1,0 +1,52 @@
+# =============================================================================
+# Prometheus - configuracion del laboratorio F13
+# =============================================================================
+# Referencia de imagen usada en compose.yaml: prom/prometheus:v3.14.0
+# https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+# =============================================================================
+
+global:
+  # scrape_interval acelerado a 5s: ventana de demostracion para que los
+  # cambios (inyeccion de falla / recuperacion) se vean reflejados en
+  # Grafana casi en tiempo real durante los 20 minutos de demo en vivo.
+  # En un entorno real este valor tipicamente es 15s-60s; documentado aqui
+  # como una simplificacion deliberada de laboratorio, no una recomendacion
+  # de produccion.
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+# Reglas de grabacion (recording rules) y una regla de alerta ilustrativa.
+# La ruta debe coincidir con el montaje definido en compose.yaml
+# (./observability/prometheus/rules.yml -> /etc/prometheus/rules.yml).
+rule_files:
+  - /etc/prometheus/rules.yml
+
+scrape_configs:
+  # Metricas tecnicas de checkout: f13_checkout_requests_total,
+  # f13_checkout_duration_seconds_bucket, f13_checkout_value_usd_sum.
+  - job_name: shop-api
+    static_configs:
+      - targets: ["shop-api:8000"]
+
+  # Metricas de pagos y estado de la falla inyectada: f13_payment_requests_total,
+  # f13_payment_duration_seconds_bucket, f13_fault_active.
+  - job_name: payment-service
+    static_configs:
+      - targets: ["payment-service:8001"]
+
+  # Metricas de negocio/SLO calculadas por value-exporter a partir de
+  # consultas PromQL contra este mismo Prometheus: f13_business_*, f13_slo_*.
+  - job_name: value-exporter
+    static_configs:
+      - targets: ["value-exporter:9200"]
+
+  # Metricas operativas del propio Collector (exportadas via el exporter
+  # "prometheus" de observability/otel-collector/config.yaml en :8889).
+  - job_name: otel-collector
+    static_configs:
+      - targets: ["otel-collector:8889"]
+
+  # Prometheus se scrapea a si mismo para monitorear su propia salud.
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

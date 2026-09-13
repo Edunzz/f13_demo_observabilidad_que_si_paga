@@ -1,0 +1,90 @@
+#cloud-config
+# ==============================================================================
+# cloud-init para la VM de laboratorio f13demo (Ubuntu 24.04 LTS)
+#
+# Deja la máquina lista con Docker Engine + Compose para que remote-install.sh
+# (fuera de este archivo) clone el repositorio y levante el stack. Este
+# cloud-init NO clona el repositorio.
+#
+# Todo el output queda además en /var/log/f13demo-cloud-init.log.
+# Validar con: cloud-init status --wait
+# ==============================================================================
+
+hostname: f13demo
+fqdn: f13demo.local
+manage_etc_hosts: true
+
+output: {all: '| tee -a /var/log/f13demo-cloud-init.log'}
+
+# Seguridad: mantener el sistema actualizado desde el primer boot.
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - git
+  - jq
+  - make
+  - unzip
+
+write_files:
+  # Límites de logging de Docker: evita que los logs de contenedores llenen el disco.
+  - path: /etc/docker/daemon.json
+    owner: root:root
+    permissions: '0644'
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
+
+  # Script de instalación de Docker Engine + Compose plugin desde el
+  # repositorio oficial de Docker para Ubuntu (se ejecuta desde runcmd).
+  - path: /usr/local/sbin/install-docker.sh
+    owner: root:root
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      # Clave GPG oficial de Docker
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+      chmod a+r /etc/apt/keyrings/docker.asc
+
+      # Repositorio oficial de Docker para Ubuntu (arquitectura y codename detectados en runtime)
+      ARCH="$(dpkg --print-architecture)"
+      CODENAME="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+      echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${CODENAME} stable" \
+        > /etc/apt/sources.list.d/docker.list
+
+      apt-get update -y
+      apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+      systemctl enable docker
+      # Restart (no solo start) para asegurar que Docker recoja /etc/docker/daemon.json,
+      # que ya existe en disco por el bloque write_files (se aplica antes de runcmd).
+      systemctl restart docker
+
+      # Permite a azureuser usar docker sin sudo (requiere reconectar la sesión SSH).
+      usermod -aG docker azureuser
+
+runcmd:
+  # Asegurar el hostname explícitamente (redundante con hostname/fqdn de arriba,
+  # pero se deja por si algún proveedor de imagen lo sobreescribe).
+  - hostnamectl set-hostname f13demo
+
+  # Directorio de trabajo del laboratorio; el clonado del repo lo hace
+  # remote-install.sh (fuera de cloud-init), no este archivo.
+  - mkdir -p /opt/f13demo
+  - chown -R azureuser:azureuser /opt/f13demo
+
+  # Instala Docker Engine + Compose plugin desde el repo oficial de Docker.
+  - bash /usr/local/sbin/install-docker.sh
+
+  - 'echo "cloud-init f13demo: provisioning completado"'

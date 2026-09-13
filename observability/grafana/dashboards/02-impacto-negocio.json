@@ -1,0 +1,504 @@
+{
+  "id": null,
+  "uid": "f13-impacto-negocio",
+  "title": "F13 | Impacto en el negocio",
+  "description": "Traduccion financiera ilustrativa de la salud tecnica del checkout: ingreso en riesgo, perdida por degradacion y perdida acumulada, correlacionadas con latencia y tasa de error. Ver dashboard 'F13 | Salud tecnica' para las metricas de origen.",
+  "tags": [
+    "f13",
+    "observabilidad-que-si-paga",
+    "negocio"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Impacto financiero en tiempo real (valores ilustrativos)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Ingreso en riesgo (USD/min)",
+      "description": "Ingreso en riesgo por minuto = tasa de error x trafico x ticket promedio (ilustrativo).",
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "f13_business_revenue_at_risk_usd_per_minute",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": false,
+          "instant": true,
+          "legendFormat": "Ingreso en riesgo (USD/min)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "dark-red",
+                "value": 200
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Perdida por degradacion (USD/min)",
+      "description": "Perdida por minuto atribuible al exceso de abandono vs. baseline (ilustrativo).",
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 5,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "f13_business_degradation_loss_usd_per_minute",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": false,
+          "instant": true,
+          "legendFormat": "Perdida por degradacion (USD/min)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 25
+              },
+              {
+                "color": "dark-red",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Perdida estimada acumulada (USD)",
+      "description": "Integral temporal de la perdida por minuto desde el ultimo reset del acumulador (ilustrativo).",
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 10,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "f13_business_estimated_loss_usd_total",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": false,
+          "instant": true,
+          "legendFormat": "Perdida estimada acumulada (USD)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 500
+              },
+              {
+                "color": "dark-red",
+                "value": 2000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Checkouts exitosos por minuto",
+      "description": "Checkouts con outcome=success, extrapolado a un minuto.",
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 15,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(f13_checkout_requests_total{outcome=\"success\"}[1m])) * 60",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": false,
+          "instant": true,
+          "legendFormat": "Checkouts exitosos por minuto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 20
+              },
+              {
+                "color": "blue",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Tasa de error (abandono estimado)",
+      "description": "Proporcion de checkouts con outcome=error (0-1). El abandono adicional que esta tasa dispara ya esta traducido a USD en el panel 'Perdida por degradacion'; value-exporter no publica un ratio de abandono independiente en el contrato de metricas actual.",
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "f13_business_error_rate_ratio",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": false,
+          "instant": true,
+          "legendFormat": "Tasa de error (abandono estimado)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.05
+              },
+              {
+                "color": "dark-red",
+                "value": 0.2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "row",
+      "title": "Correlacion tecnica <-> financiera",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Overlay: latencia p95, tasa de error e ingreso en riesgo",
+      "description": "Tres ejes independientes para mostrar como la degradacion tecnica (latencia/errores) se traduce en exposicion financiera casi en el mismo instante.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "f13:checkout_latency_p95_5m",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": true,
+          "instant": false,
+          "legendFormat": "latencia p95 (s)"
+        },
+        {
+          "refId": "B",
+          "expr": "f13_business_error_rate_ratio",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": true,
+          "instant": false,
+          "legendFormat": "tasa de error"
+        },
+        {
+          "refId": "C",
+          "expr": "f13_business_revenue_at_risk_usd_per_minute",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": true,
+          "instant": false,
+          "legendFormat": "ingreso en riesgo (USD/min)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 5
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "text",
+      "title": "Nota sobre los valores mostrados",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Valores ilustrativos para demostrar el metodo\n\nTodas las cifras en USD de este dashboard (ingreso en riesgo, perdida por degradacion, perdida acumulada) se calculan con formulas simples y parametros configurables en `.env` (`AVERAGE_REQUEST_VALUE_USD`, `AVERAGE_TICKET_USD`, `BASELINE_ABANDONMENT_RATE`, `DEGRADED_ABANDONMENT_RATE`, `REQUESTS_PER_MINUTE`). **No representan datos financieros reales de ninguna organizacion**: existen unicamente para demostrar como traducir senales tecnicas (latencia, errores, disponibilidad) a lenguaje de negocio. Ver `docs/05-modelo-financiero.md` para las formulas completas."
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "editable": true,
+  "graphTooltip": 1
+}
