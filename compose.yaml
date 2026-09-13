@@ -149,6 +149,16 @@ services:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./observability/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
       - prometheus-data:/prometheus
+    ports:
+      # Publicado SOLO en loopback (127.0.0.1), nunca en la interfaz publica
+      # de la VM: scripts/smoke-test.sh y collect-diagnostics.sh corren en el
+      # host de la VM (no dentro de un contenedor) y necesitan `localhost:9090`
+      # para verificar que Prometheus scrapeo las metricas f13_*. El binding a
+      # 127.0.0.1 hace que el puerto sea inalcanzable desde la red (el NSG ni
+      # siquiera aplica aqui: loopback no pasa por la NIC), cumpliendo el
+      # requisito de "Prometheus nunca expuesto a Internet" sin bloquear la
+      # validacion local.
+      - "127.0.0.1:9090:9090"
     networks:
       - f13demo-net
     logging: *default-logging
