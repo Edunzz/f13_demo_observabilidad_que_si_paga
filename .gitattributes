@@ -1,0 +1,11 @@
+# Fuerza LF en archivos que se ejecutan dentro de la VM Linux (f13demo),
+# sin importar el core.autocrlf del colaborador que hace el commit.
+*.sh text eol=lf
+*.py text eol=lf
+Dockerfile text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+
+*.png binary
+*.drawio text eol=lf

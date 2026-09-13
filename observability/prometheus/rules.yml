@@ -1,0 +1,100 @@
+# =============================================================================
+# Prometheus - recording rules y regla de alerta ilustrativa (F13)
+# =============================================================================
+# Montado en el contenedor de Prometheus como /etc/prometheus/rules.yml
+# (ver rule_files en prometheus.yml y el volumen en compose.yaml).
+#
+# IMPORTANTE: este laboratorio NO despliega Alertmanager. La regla del grupo
+# "f13-burn-rate-illustrative" de mas abajo se evalua y queda visible en
+# Prometheus (http://prometheus:9090/alerts, no publicado al host) solo para
+# ILUSTRAR el patron de alerta por burn-rate de error budget descrito en el
+# SRE Workbook de Google. No dispara ninguna notificacion real porque no hay
+# a donde enrutarla. Referencia:
+# https://sre.google/workbook/alerting-on-slos/
+# =============================================================================
+
+groups:
+  # ---------------------------------------------------------------------
+  # Tasas de exito/error de checkout y pago (ventana movil de 5 minutos,
+  # coherente con el scrape_interval acelerado de 5s de esta demo).
+  # ---------------------------------------------------------------------
+  - name: f13-rates
+    interval: 5s
+    rules:
+      - record: f13:checkout_success_rate_5m
+        expr: >-
+          sum(rate(f13_checkout_requests_total{outcome="success"}[5m]))
+          /
+          sum(rate(f13_checkout_requests_total[5m]))
+
+      - record: f13:checkout_error_rate_5m
+        expr: >-
+          sum(rate(f13_checkout_requests_total{outcome="error"}[5m]))
+          /
+          sum(rate(f13_checkout_requests_total[5m]))
+
+      - record: f13:payment_success_rate_5m
+        expr: >-
+          sum(rate(f13_payment_requests_total{outcome="success"}[5m]))
+          /
+          sum(rate(f13_payment_requests_total[5m]))
+
+      - record: f13:payment_error_rate_5m
+        expr: >-
+          sum(rate(f13_payment_requests_total{outcome="error"}[5m]))
+          /
+          sum(rate(f13_payment_requests_total[5m]))
+
+  # ---------------------------------------------------------------------
+  # Percentiles de latencia via histogram_quantile sobre los histogramas de
+  # duracion. Usados por el dashboard tecnico (p50/p95/p99) y por el
+  # dashboard de impacto de negocio (overlay de p95).
+  # ---------------------------------------------------------------------
+  - name: f13-latency
+    interval: 5s
+    rules:
+      - record: f13:checkout_latency_p50_5m
+        expr: >-
+          histogram_quantile(0.50,
+            sum(rate(f13_checkout_duration_seconds_bucket[5m])) by (le)
+          )
+
+      - record: f13:checkout_latency_p95_5m
+        expr: >-
+          histogram_quantile(0.95,
+            sum(rate(f13_checkout_duration_seconds_bucket[5m])) by (le)
+          )
+
+      - record: f13:checkout_latency_p99_5m
+        expr: >-
+          histogram_quantile(0.99,
+            sum(rate(f13_checkout_duration_seconds_bucket[5m])) by (le)
+          )
+
+      - record: f13:payment_latency_p95_5m
+        expr: >-
+          histogram_quantile(0.95,
+            sum(rate(f13_payment_duration_seconds_bucket[5m])) by (le)
+          )
+
+  # ---------------------------------------------------------------------
+  # Regla de alerta ILUSTRATIVA (ver aviso arriba: no hay Alertmanager en
+  # este laboratorio). Se dispara cuando el presupuesto de error restante
+  # publicado por value-exporter (f13_slo_error_budget_remaining_ratio) cae
+  # por debajo del 10%, como ejemplo simplificado de "alerta por burn-rate".
+  # ---------------------------------------------------------------------
+  - name: f13-burn-rate-illustrative
+    rules:
+      - alert: F13ErrorBudgetBurnRateHigh
+        expr: f13_slo_error_budget_remaining_ratio < 0.10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "F13 (ilustrativo): presupuesto de error de checkout por debajo del 10%"
+          description: >-
+            Regla de ejemplo para la charla "Observabilidad que si paga".
+            No hay Alertmanager desplegado en este laboratorio: esta alerta
+            solo demuestra el patron de burn-rate alerting de error budget
+            (ver https://sre.google/workbook/alerting-on-slos/), no envia
+            notificaciones reales.

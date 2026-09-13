@@ -1,0 +1,17 @@
+.env
+.f13demo-state.env
+*.pem
+*.key
+id_rsa
+id_ed25519
+*.tar.gz
+diagnostics/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+node_modules/
+*.log
+.DS_Store
+Thumbs.db

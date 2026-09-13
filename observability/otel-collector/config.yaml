@@ -1,0 +1,129 @@
+# =============================================================================
+# OpenTelemetry Collector (contrib) - configuracion del laboratorio F13
+# =============================================================================
+# Rol en la arquitectura: recibe trazas OTLP de shop-api y payment-service,
+# las protege de sobrecarga de memoria, las agrupa en lotes y las reenvia a
+# Jaeger. Tambien expone sus propias metricas operativas para que Prometheus
+# las scrapee (ver exporter "prometheus" y bloque service.telemetry.metrics).
+#
+# Referencia de imagen usada en compose.yaml: otel/opentelemetry-collector-contrib:0.160.0
+# https://github.com/open-telemetry/opentelemetry-collector-releases/releases
+# https://opentelemetry.io/docs/collector/configuration/
+#
+# NOTA IMPORTANTE (reconciliar con quien opere el compose): la imagen oficial
+# "otelcol-contrib" se construye FROM scratch/distroless y NO incluye shell,
+# curl ni wget. Por eso este servicio NO puede tener un healthcheck exec-based
+# en compose.yaml (no hay binario disponible para ejecutar la prueba). El
+# extension "health_check" de abajo sigue siendo util para verificacion manual
+# (p.ej. `docker compose exec` no funciona por lo mismo, pero se puede
+# verificar desde otro contenedor de la red con acceso a un cliente HTTP, o
+# temporalmente publicando el puerto 13133 durante debug). En compose.yaml los
+# servicios que dependen de otel-collector usan `condition: service_started`
+# en lugar de `service_healthy` por esta razon.
+# =============================================================================
+
+receivers:
+  # Recibe spans OTLP tanto por gRPC (4317, usado por shop-api/payment-service
+  # via opentelemetry-exporter-otlp-proto-grpc) como por HTTP (4318, disponible
+  # para clientes que prefieran OTLP/HTTP).
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Protege al Collector de quedarse sin memoria si el volumen de spans se
+  # dispara (p.ej. durante la inyeccion de falla, que genera mas trafico de
+  # trazas por los reintentos/latencia). limit_percentage y
+  # spike_limit_percentage son relativos al limite de memoria del proceso.
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 20
+
+  # Agrupa spans antes de exportar para reducir el numero de requests salientes
+  # hacia Jaeger. Valores por defecto razonables para una demo de bajo volumen.
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+
+exporters:
+  # Exporta trazas a Jaeger via su receptor OTLP nativo (habilitado con
+  # COLLECTOR_OTLP_ENABLED=true en el servicio jaeger de compose.yaml).
+  # tls.insecure=true porque la comunicacion ocurre dentro de la red interna
+  # f13demo-net (sin TLS entre contenedores, aceptable para un laboratorio).
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  # Expone las metricas que pasen por el pipeline "metrics" en formato
+  # Prometheus, para que Prometheus las scrapee en otel-collector:8889
+  # (ver observability/prometheus/prometheus.yml, job "otel-collector").
+  prometheus:
+    endpoint: 0.0.0.0:8889
+
+  # Exporter de depuracion: imprime resumenes de los datos que pasan por el
+  # pipeline en los logs del propio Collector. Util durante la demo/ensayo
+  # para confirmar visualmente que llegan spans. No usar "logging" (deprecado);
+  # "debug" es el reemplazo vigente.
+  debug:
+    verbosity: basic
+
+extensions:
+  # Expone un endpoint de salud HTTP simple (200 OK cuando el Collector esta
+  # listo). Ver nota superior sobre por que no se usa como healthcheck de
+  # Docker en este servicio concreto.
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+  # pprof y zpages son extensiones opcionales de diagnostico (profiling y
+  # paginas internas de estado de pipelines/extensiones). No se publican fuera
+  # de la red interna; solo utiles para depuracion manual dentro de la demo.
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+service:
+  extensions: [health_check, pprof, zpages]
+
+  pipelines:
+    # Pipeline principal de la demo: OTLP entrante -> proteccion de memoria +
+    # batching -> Jaeger. "debug" ademas imprime un resumen en logs.
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/jaeger, debug]
+
+    # Pipeline opcional: si en el futuro algun servicio enviara metricas via
+    # OTLP (hoy shop-api/payment-service/value-exporter exponen /metrics
+    # directamente para scrape de Prometheus, no usan el receptor OTLP para
+    # metricas), este pipeline las reenviaria en formato Prometheus por 8889.
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+
+  telemetry:
+    # Metricas propias del proceso Collector (goroutines, uso de memoria,
+    # spans recibidos/exportados, etc.), expuestas en :8888. Distintas de las
+    # metricas de negocio/aplicacion que via el exporter "prometheus" salen
+    # por :8889.
+    logs:
+      level: info
+    # A partir de las versiones recientes del Collector, `metrics.address`
+    # quedo obsoleto: la telemetria propia se configura como un "reader" al
+    # estilo SDK de OpenTelemetry (ver CHANGELOG de opentelemetry-collector,
+    # migracion de service::telemetry::metrics). Este es el reemplazo directo
+    # para seguir exponiendo las metricas propias del Collector en :8888.
+    metrics:
+      level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: "0.0.0.0"
+                port: 8888

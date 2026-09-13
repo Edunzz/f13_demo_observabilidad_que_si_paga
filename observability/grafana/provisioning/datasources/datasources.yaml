@@ -1,0 +1,35 @@
+# =============================================================================
+# Grafana - provisioning de datasources (F13)
+# =============================================================================
+# Se monta en /etc/grafana/provisioning/datasources dentro del contenedor de
+# Grafana (ver volumen en compose.yaml). Se aplica automaticamente al
+# arrancar, sin intervencion manual.
+# https://grafana.com/docs/grafana/latest/administration/provisioning/#data-sources
+# =============================================================================
+apiVersion: 1
+
+datasources:
+  # Fuente principal de metricas (tecnicas, de negocio y de SLO). uid fijo
+  # "prometheus-f13" para que los dashboards JSON puedan referenciarlo de
+  # forma estable sin depender de que Grafana autogenere el uid.
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus-f13
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 5s
+      httpMethod: POST
+
+  # Fuente de trazas distribuidas. Grafana consulta la API HTTP de Jaeger
+  # Query (mismo puerto que la UI, 16686) para poder enlazar traceId desde
+  # anotaciones o el panel de instrucciones del dashboard tecnico.
+  - name: Jaeger
+    type: jaeger
+    uid: jaeger-f13
+    access: proxy
+    url: http://jaeger:16686
+    isDefault: false
+    editable: false

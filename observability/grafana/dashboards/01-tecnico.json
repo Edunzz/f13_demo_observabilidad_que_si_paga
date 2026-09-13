@@ -1,0 +1,680 @@
+{
+  "id": null,
+  "uid": "f13-tecnico",
+  "title": "F13 | Salud tecnica",
+  "description": "Throughput, errores, latencia p50/p95/p99, estado de la falla inyectada, SLIs tecnico/negocio y error budget. Valores tecnicos reales del stack de ejemplo F13; ver dashboard 'F13 | Impacto en el negocio' para la traduccion financiera (ilustrativa).",
+  "tags": [
+    "f13",
+    "observabilidad-que-si-paga",
+    "tecnico"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Checkout",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Throughput de checkout (por resultado)",
+      "description": "sum(rate(f13_checkout_requests_total[$__rate_interval])) by (outcome)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(f13_checkout_requests_total[$__rate_interval])) by (outcome)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": true,
+          "instant": false,
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Tasa de error de checkout (ventana 5m)",
+      "description": "f13:checkout_error_rate_5m (recording rule)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "f13:checkout_error_rate_5m",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": true,
+          "instant": false,
+          "legendFormat": "error rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.05
+              },
+              {
+                "color": "dark-red",
+                "value": 0.2
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Latencia de checkout p50 / p95 / p99",
+      "description": "histogram_quantile sobre f13_checkout_duration_seconds_bucket (recording rules f13:checkout_latency_p50_5m/p95_5m/p99_5m)",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "f13:checkout_latency_p50_5m",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": true,
+          "instant": false,
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "f13:checkout_latency_p95_5m",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": true,
+          "instant": false,
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "f13:checkout_latency_p99_5m",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": true,
+          "instant": false,
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 5
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Pagos",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "panels": []
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Throughput y errores de payment-service",
+      "description": "sum(rate(f13_payment_requests_total[$__rate_interval])) by (outcome)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(f13_payment_requests_total[$__rate_interval])) by (outcome)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": true,
+          "instant": false,
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Estado de la falla inyectada (f13_fault_active)",
+      "description": "0 = servicio sano, 1 = falla activa en payment-service. El color y el texto cambian juntos (no depende solo de rojo/verde).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "f13_fault_active",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": false,
+          "instant": true,
+          "legendFormat": "fault_active"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OK - sin falla",
+                  "color": "blue"
+                }
+              }
+            },
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "FALLA ACTIVA",
+                  "color": "orange"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "SLIs, SLO y error budget",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "SLI tecnico (checkouts < 1s / total, 5m)",
+      "description": "Proporcion de checkouts que terminan por debajo del umbral de latencia ilustrativo de 1s: sum(rate(f13_checkout_duration_seconds_bucket{le=\"1\"}[5m])) / sum(rate(f13_checkout_duration_seconds_count[5m]))",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(f13_checkout_duration_seconds_bucket{le=\"1\"}[5m])) / sum(rate(f13_checkout_duration_seconds_count[5m]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": false,
+          "instant": true,
+          "legendFormat": "SLI tecnico"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.95
+              },
+              {
+                "color": "blue",
+                "value": 0.999
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "SLI de negocio (checkouts exitosos / total, 5m)",
+      "description": "f13:checkout_success_rate_5m",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "f13:checkout_success_rate_5m",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": false,
+          "instant": true,
+          "legendFormat": "SLI negocio"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.95
+              },
+              {
+                "color": "blue",
+                "value": 0.999
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "gauge",
+      "title": "Error budget restante",
+      "description": "f13_slo_error_budget_remaining_ratio (calculado y publicado por value-exporter a partir de f13_slo_target_ratio y la tasa de exito observada)",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "f13_slo_error_budget_remaining_ratio",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": false,
+          "instant": true,
+          "legendFormat": "budget restante"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.1
+              },
+              {
+                "color": "blue",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "SLO objetivo / burn rate instantaneo",
+      "description": "f13_slo_target_ratio (objetivo configurado, ilustrativo) y burn rate = (1 - SLI negocio) / (1 - SLO objetivo)",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-f13"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "f13_slo_target_ratio",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": false,
+          "instant": true,
+          "legendFormat": "SLO objetivo"
+        },
+        {
+          "refId": "B",
+          "expr": "(1 - f13:checkout_success_rate_5m) / (1 - f13_slo_target_ratio)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-f13"
+          },
+          "editorMode": "code",
+          "range": false,
+          "instant": true,
+          "legendFormat": "burn rate (x)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "row",
+      "title": "Trazas distribuidas",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "panels": []
+    },
+    {
+      "id": 14,
+      "type": "text",
+      "title": "Como buscar trazas en Jaeger",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Buscar trazas de esta demo en Jaeger\n\nJaeger UI no se referencia con una IP fija en este dashboard porque Grafana no conoce la IP publica del host donde corre el laboratorio.\n\n1. Abre `http://<IP_PUBLICA_O_LOCALHOST>:16686` en el navegador (puerto publicado por el servicio `jaeger` en `compose.yaml`).\n2. En **Service**, elige `shop-api` para ver la traza raiz del checkout, o `payment-service` para ver el procesamiento del pago.\n3. Filtra por `Tags`: `business.operation=checkout` o `business.operation=payment`, y opcionalmente `fault.injected=true` durante la inyeccion de falla.\n4. Una traza completa saludable muestra `shop-api -> payment-service` con dos spans (`checkout` y `payment`) enlazados por contexto W3C Trace Context.\n\n_Datasource Jaeger provisionado en Grafana (`Jaeger`, proxy a `http://jaeger:16686`) para futuras integraciones de explore/anotaciones._"
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "editable": true,
+  "graphTooltip": 1
+}

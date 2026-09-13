@@ -1,0 +1,328 @@
+# =============================================================================
+# F13 | "Observabilidad que si paga" - Docker Compose del laboratorio
+# =============================================================================
+# Este archivo ensambla shop-api, payment-service, value-exporter y
+# load-generator (aplicaciones en ./app/*, construidas localmente) junto con
+# el stack de observabilidad 100% open source: OpenTelemetry Collector,
+# Prometheus, Jaeger y Grafana.
+#
+# IMPORTANTE - versiones de imagen: todas las imagenes de terceros estan
+# fijadas por tag (nunca "latest"). Las versiones concretas usadas aqui deben
+# reflejarse en VERSIONS.md (mantenido por el agente/orquestador responsable
+# de ese archivo, no por este compose.yaml):
+#   - otel/opentelemetry-collector-contrib:0.160.0
+#   - prom/prometheus:v3.14.0
+#   - jaegertracing/all-in-one:1.76.0
+#   - grafana/grafana:13.2.1
+#
+# Nota sobre Jaeger 1.76.0: es el ultimo release de la serie v1 (Jaeger v1
+# llego a EOL el 2025-12-31; desde entonces el proyecto solo publica v2, con
+# un modelo de configuracion distinto basado en un archivo YAML propio en vez
+# de las variables de entorno clasicas). Se elige deliberadamente la ultima
+# v1 porque el contrato de este laboratorio pide `COLLECTOR_OTLP_ENABLED=true`
+# y almacenamiento `badger` via variables de entorno, que es el
+# comportamiento clasico de all-in-one v1. Ver docs/08-troubleshooting.md /
+# VERSIONS.md para la ruta de migracion a Jaeger v2 (2.20.0) si se decide
+# modernizar el laboratorio mas adelante.
+#
+# Compose V2 no requiere el campo "version:" de nivel superior (obsoleto).
+# =============================================================================
+
+# --- Anchors reutilizables --------------------------------------------------
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-labels: &default-labels
+  project: f13-demo
+  owner: JoseRomero
+  purpose: observabilidad-que-si-paga
+  environment: demo
+
+networks:
+  f13demo-net:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  jaeger-badger-data:
+
+services:
+  # ---------------------------------------------------------------------
+  # OTLP -> Jaeger. Recibe trazas de shop-api y payment-service.
+  # ---------------------------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.160.0
+    container_name: f13demo-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./observability/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    networks:
+      - f13demo-net
+    logging: *default-logging
+    labels: *default-labels
+    # SIN healthcheck: la imagen oficial otelcol-contrib se construye
+    # FROM scratch/distroless y no incluye shell, curl ni wget, por lo que no
+    # hay binario disponible dentro del contenedor para ejecutar una prueba
+    # exec-based (ver detalle en observability/otel-collector/config.yaml).
+    # La extension health_check queda habilitada en :13133 para verificacion
+    # manual/externa. Los servicios que dependen de este (abajo) usan
+    # `condition: service_started` en vez de `service_healthy`.
+
+  # ---------------------------------------------------------------------
+  # Init de una sola vez: el volumen nombrado `jaeger-badger-data` se crea
+  # con dueño root la primera vez, pero la imagen oficial de Jaeger corre
+  # como usuario no-root (UID/GID 10001) y no puede crear subdirectorios ahi
+  # ("mkdir /badger/key: permission denied"). Este contenedor efimero (no
+  # privilegiado, solo busybox) ajusta el dueno del volumen antes de que
+  # arranque jaeger y termina inmediatamente.
+  # ---------------------------------------------------------------------
+  jaeger-init:
+    image: busybox:1.36.1
+    container_name: f13demo-jaeger-init
+    command: ["sh", "-c", "mkdir -p /badger/data /badger/key && chown -R 10001:10001 /badger"]
+    volumes:
+      - jaeger-badger-data:/badger
+    networks:
+      - f13demo-net
+    labels: *default-labels
+    restart: "no"
+
+  # ---------------------------------------------------------------------
+  # Backend + UI de trazas distribuidas.
+  # ---------------------------------------------------------------------
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    container_name: f13demo-jaeger
+    restart: unless-stopped
+    depends_on:
+      jaeger-init:
+        condition: service_completed_successfully
+    environment:
+      # Habilita el receptor OTLP nativo de Jaeger v1 (grpc 4317 / http 4318)
+      # para que otel-collector pueda exportarle trazas directamente.
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: badger
+      BADGER_EPHEMERAL: "false"
+      BADGER_DIRECTORY_VALUE: /badger/data
+      BADGER_DIRECTORY_KEY: /badger/key
+    volumes:
+      # Persistencia del storage badger de un solo nodo. Sin este volumen,
+      # las trazas se pierden en cada `docker compose down`/recreate del
+      # contenedor (modo "efimero" por defecto de all-in-one). Con el volumen
+      # montado, las trazas sobreviven a reinicios normales del contenedor,
+      # pero se siguen perdiendo si se ejecuta `docker compose down -v`
+      # (borra volumenes) o `destroy-lab-resources.sh`. No es un backend de
+      # produccion: badger es de un solo nodo y sin replicacion.
+      - jaeger-badger-data:/badger
+    ports:
+      - "16686:16686" # UI de Jaeger, unico puerto de este servicio publicado al host.
+    networks:
+      - f13demo-net
+    logging: *default-logging
+    labels: *default-labels
+    healthcheck:
+      # :14269 es el puerto admin/health HTTP clasico de Jaeger v1 (interno,
+      # no publicado). La imagen es Alpine y trae wget.
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:14269/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------
+  # Metricas tecnicas, de negocio, de SLO y del propio Collector.
+  # ---------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    container_name: f13demo-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      # Publicado SOLO en loopback (127.0.0.1), nunca en la interfaz publica
+      # de la VM: scripts/smoke-test.sh y collect-diagnostics.sh corren en el
+      # host de la VM (no dentro de un contenedor) y necesitan `localhost:9090`
+      # para verificar que Prometheus scrapeo las metricas f13_*. El binding a
+      # 127.0.0.1 hace que el puerto sea inalcanzable desde la red (el NSG ni
+      # siquiera aplica aqui: loopback no pasa por la NIC), cumpliendo el
+      # requisito de "Prometheus nunca expuesto a Internet" sin bloquear la
+      # validacion local.
+      - "127.0.0.1:9090:9090"
+    networks:
+      - f13demo-net
+    logging: *default-logging
+    labels: *default-labels
+    healthcheck:
+      # La imagen oficial de Prometheus esta basada en busybox: incluye
+      # `wget` y un `/bin/sh` minimo, suficiente para CMD-SHELL.
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------
+  # Dashboards provisionados automaticamente (tecnico + impacto de negocio).
+  # ---------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:13.2.1
+    container_name: f13demo-grafana
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+    networks:
+      - f13demo-net
+    logging: *default-logging
+    labels: *default-labels
+    healthcheck:
+      # Imagen oficial de Grafana basada en Alpine: incluye wget.
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+  # ---------------------------------------------------------------------
+  # Aplicaciones del laboratorio (build local, ./app/*).
+  # ---------------------------------------------------------------------
+  payment-service:
+    build:
+      context: ./app/payment-service
+      dockerfile: Dockerfile
+    image: f13demo/payment-service:local
+    container_name: f13demo-payment-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      OTEL_SERVICE_NAME: payment-service
+    ports:
+      # Publicado SOLO en loopback (127.0.0.1), nunca en la interfaz publica.
+      # scripts/inject-fault.sh y recover.sh corren en el host de la VM (por
+      # SSH, fuera de cualquier contenedor) y necesitan `localhost:8001` para
+      # llamar la API admin (/admin/fault). El binding a 127.0.0.1 la deja
+      # inalcanzable desde la red (el NSG no aplica a loopback), cumpliendo
+      # "endpoint administrativo nunca expuesto" sin bloquear la operacion
+      # local de la demo.
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      otel-collector:
+        condition: service_started
+    networks:
+      - f13demo-net
+    logging: *default-logging
+    labels: *default-labels
+    healthcheck:
+      # Misma prueba definida en app/payment-service/Dockerfile (HEALTHCHECK
+      # embebido con python -c + urllib.request, sin depender de curl/wget en
+      # la imagen python:3.12-slim). Se repite aqui explicitamente para que
+      # `depends_on: condition: service_healthy` de shop-api funcione y para
+      # que compose.yaml sea autodescriptivo sin tener que abrir el Dockerfile.
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2)\" || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  shop-api:
+    build:
+      context: ./app/shop-api
+      dockerfile: Dockerfile
+    image: f13demo/shop-api:local
+    container_name: f13demo-shop-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      OTEL_SERVICE_NAME: shop-api
+      PAYMENT_SERVICE_URL: http://payment-service:8001
+    ports:
+      - "8080:8000"
+    depends_on:
+      payment-service:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - f13demo-net
+    logging: *default-logging
+    labels: *default-labels
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)\" || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  value-exporter:
+    build:
+      context: ./app/value-exporter
+      dockerfile: Dockerfile
+    image: f13demo/value-exporter:local
+    container_name: f13demo-value-exporter
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PROMETHEUS_URL: http://prometheus:9090
+    ports:
+      # Publicado SOLO en loopback (127.0.0.1). scripts/demo-reset.sh corre
+      # en el host de la VM (por SSH) y necesita `localhost:9200` para llamar
+      # POST /admin/reset-accumulator. Igual que en prometheus/payment-service:
+      # inalcanzable desde la red, solo desde el propio host.
+      - "127.0.0.1:9200:9200"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - f13demo-net
+    logging: *default-logging
+    labels: *default-labels
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:9200/health', timeout=2)\" || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  load-generator:
+    build:
+      context: ./app/load-generator
+      dockerfile: Dockerfile
+    image: f13demo/load-generator:local
+    container_name: f13demo-load-generator
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SHOP_API_URL: http://shop-api:8000
+    depends_on:
+      shop-api:
+        condition: service_healthy
+    networks:
+      - f13demo-net
+    logging: *default-logging
+    labels: *default-labels
+    # SIN healthcheck: es un cliente en loop sin puerto/endpoint expuesto
+    # (documentado explicitamente en app/load-generator/Dockerfile). Su
+    # estado se observa via logs y via las metricas server-side de shop-api.

@@ -1,0 +1,29 @@
+# =============================================================================
+# Grafana - provisioning de dashboards (F13)
+# =============================================================================
+# Se monta en /etc/grafana/provisioning/dashboards dentro del contenedor de
+# Grafana. El "provider" apunta a la carpeta montada desde
+# ./observability/grafana/dashboards (ver volumen en compose.yaml), donde
+# viven 01-tecnico.json y 02-impacto-negocio.json.
+# https://grafana.com/docs/grafana/latest/administration/provisioning/#dashboards
+#
+# allowUiUpdates: false por defecto -> reproducibilidad: los dashboards que
+# vea cualquier persona que clone el repo y levante el stack son EXACTAMENTE
+# los versionados en Git, no una version editada a mano en un tenant previo.
+# Para una demo real donde se quiera ajustar un panel en vivo y conservarlo,
+# se puede cambiar a "true" (Grafana escribiria los cambios de vuelta al
+# archivo JSON montado), a costa de perder esa garantia de reproducibilidad.
+# =============================================================================
+apiVersion: 1
+
+providers:
+  - name: "F13 dashboards"
+    orgId: 1
+    folder: "F13"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
