@@ -24,7 +24,10 @@ jobs:
           # -x: sigue los `source`/`.` hacia otros scripts del propio repo
           # (p.ej. scripts/lib/common.sh), evitando el falso positivo SC1091
           # "not following" que aparece sin este flag.
-          SHELLCHECK_OPTS: -x
+          # -P SCRIPTDIR: busca los archivos `source=` relativos al directorio
+          # del propio script (no al cwd desde el que corre shellcheck), que
+          # es como estan escritas las directivas `# shellcheck source=...`.
+          SHELLCHECK_OPTS: -x -P SCRIPTDIR
         with:
           scandir: "."
           ignore_paths: ".git"
