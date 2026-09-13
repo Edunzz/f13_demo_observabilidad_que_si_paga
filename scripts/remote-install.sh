@@ -16,6 +16,10 @@ source "${SCRIPT_DIR}/lib/common.sh"
 install_error_trap
 
 REPO_URL="https://github.com/Edunzz/f13_demo_observabilidad_que_si_paga.git"
+# GIT_REF opcional: rama/tag/commit a clonar o hacer checkout, por si se
+# necesita validar un cambio ANTES de que llegue a `main` (p. ej. un PR
+# abierto). Por defecto vacío: usa la rama por defecto del remoto (main).
+GIT_REF="${GIT_REF:-}"
 HEALTH_TIMEOUT_SECONDS=300
 HEALTH_POLL_INTERVAL_SECONDS=5
 
@@ -42,6 +46,9 @@ de la VM remota `f13demo`, en este orden:
 No requiere argumentos. Variables de entorno relevantes:
   STATE_FILE          ruta al archivo de estado (default: raíz del repo)
   REMOTE_REPO_DIR      ruta del repo dentro de la VM (default: /opt/f13demo/repo)
+  GIT_REF              rama/tag/commit a clonar o a los que hacer checkout
+                       (default: vacío, usa la rama por defecto del remoto).
+                       Útil para validar una rama/PR antes de mergear a main.
 EOF
 }
 
@@ -65,6 +72,15 @@ require_cmd ssh git
 log_info "Paso 1/12: cargando estado local (${STATE_FILE})..."
 load_state_file
 
+# Usado por los dos bloques `ssh ... bash -s <<'REMOTE_SCRIPT'` más abajo, que
+# no pasan por ssh_exec() (necesitan enviar un script multilínea por stdin).
+# Mismo motivo que en ssh_exec(): sin `-i` explícito, ssh no encuentra una
+# clave con nombre no estándar como la de este laboratorio.
+SSH_IDENTITY_OPTS=()
+if [[ -n "${SSH_PRIVATE_KEY_PATH:-}" && -f "${SSH_PRIVATE_KEY_PATH:-}" ]]; then
+    SSH_IDENTITY_OPTS=(-i "${SSH_PRIVATE_KEY_PATH}")
+fi
+
 # 2. Verificar SSH -------------------------------------------------------------
 log_info "Paso 2/12: verificando conectividad SSH a ${ADMIN_USER}@${PUBLIC_IP}..."
 if ! retry 5 5 ssh_exec "echo ok" >/dev/null; then
@@ -74,10 +90,24 @@ fi
 
 # 3. Esperar cloud-init --------------------------------------------------------
 log_info "Paso 3/12: esperando a que cloud-init termine en la VM (puede tardar varios minutos)..."
-if ! ssh_exec "sudo cloud-init status --wait"; then
-    log_error "cloud-init reportó un error o no terminó correctamente. Revisa /var/log/f13demo-cloud-init.log en la VM."
+# `cloud-init status --wait` devuelve exit code 2 ("degraded") si registro
+# CUALQUIER advertencia recuperable durante el proceso, no solo errores
+# reales — y la propia directiva `output:` de cloud-init.yaml (redirigir
+# stdout/stderr a /var/log/f13demo-cloud-init.log, pedida explicitamente
+# para este laboratorio) genera una de esas advertencias benignas al
+# cambiar de descriptor. Por eso no basta con mirar el exit code: hay que
+# distinguir "status: error" (real) de "degraded" con solo advertencias.
+cloud_init_output="$(ssh_exec "sudo cloud-init status --wait" 2>&1)" || true
+echo "${cloud_init_output}"
+if grep -q "status: error" <<<"${cloud_init_output}"; then
+    log_error "cloud-init reportó un error real. Revisa /var/log/f13demo-cloud-init.log en la VM."
     exit 1
 fi
+if ! grep -q "status: done" <<<"${cloud_init_output}"; then
+    log_error "cloud-init no reportó 'done'. Salida completa arriba; revisa /var/log/f13demo-cloud-init.log en la VM."
+    exit 1
+fi
+log_info "cloud-init completo (si el estado extendido es 'degraded', son advertencias no críticas; ver 'cloud-init status --long' en la VM)."
 
 # 4. Clonar o actualizar el repo ------------------------------------------------
 log_info "Paso 4/12: verificando repo remoto en ${REMOTE_REPO_DIR}..."
@@ -89,10 +119,18 @@ if ssh_exec "test -d '${REMOTE_REPO_DIR}/.git'"; then
         exit 1
     fi
     log_info "Repo limpio. Ejecutando git fetch + fast-forward..."
-    ssh_repo "git fetch origin && git pull --ff-only"
+    if [[ -n "${GIT_REF}" ]]; then
+        ssh_repo "git fetch origin '${GIT_REF}' && git checkout '${GIT_REF}' && git pull --ff-only origin '${GIT_REF}' || true"
+    else
+        ssh_repo "git fetch origin && git pull --ff-only"
+    fi
 else
     log_info "El repo no existe todavía; clonando ${REPO_URL}..."
     ssh_exec "test -d '${REMOTE_REPO_DIR}/.git' || git clone '${REPO_URL}' '${REMOTE_REPO_DIR}'"
+    if [[ -n "${GIT_REF}" ]]; then
+        log_info "GIT_REF='${GIT_REF}' definido; haciendo checkout explícito (útil para validar un PR antes de mergear a main)..."
+        ssh_repo "git fetch origin '${GIT_REF}' && git checkout '${GIT_REF}'"
+    fi
 fi
 
 # 5. Crear .env y generar secretos si hace falta --------------------------------
@@ -104,7 +142,7 @@ log_info "Paso 5/12: verificando archivo .env remoto..."
 # secretos generados (GF_SECURITY_ADMIN_PASSWORD, FAULT_ADMIN_TOKEN) se crean,
 # usan y descartan enteramente dentro de la VM: nunca viajan de vuelta al
 # operador ni se imprimen en este script.
-env_setup_result="$(ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${ADMIN_USER}@${PUBLIC_IP}" bash -s -- "${REMOTE_REPO_DIR}" <<'REMOTE_SCRIPT'
+env_setup_result="$(ssh "${SSH_IDENTITY_OPTS[@]}" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${ADMIN_USER}@${PUBLIC_IP}" bash -s -- "${REMOTE_REPO_DIR}" <<'REMOTE_SCRIPT'
 set -Eeuo pipefail
 REPO_DIR="$1"
 cd "${REPO_DIR}"
@@ -182,7 +220,7 @@ log_info "Paso 10/12: esperando healthchecks de todos los contenedores (timeout 
 # NOTA DE DISEÑO: hacemos todo el polling en UN solo comando remoto (heredoc)
 # en lugar de repetir `ssh_exec` cada 5s desde el operador, para evitar 60+
 # conexiones SSH nuevas y reducir la sensibilidad a la latencia de red.
-health_result="$(ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${ADMIN_USER}@${PUBLIC_IP}" bash -s -- "${REMOTE_REPO_DIR}" "${HEALTH_TIMEOUT_SECONDS}" "${HEALTH_POLL_INTERVAL_SECONDS}" <<'REMOTE_SCRIPT'
+health_result="$(ssh "${SSH_IDENTITY_OPTS[@]}" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${ADMIN_USER}@${PUBLIC_IP}" bash -s -- "${REMOTE_REPO_DIR}" "${HEALTH_TIMEOUT_SECONDS}" "${HEALTH_POLL_INTERVAL_SECONDS}" <<'REMOTE_SCRIPT'
 set -Eeuo pipefail
 REPO_DIR="$1"
 TIMEOUT="$2"
