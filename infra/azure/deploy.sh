@@ -383,18 +383,21 @@ echo "=== Paso 9: VM '$VM_NAME' ==="
 if az vm show --resource-group "$RESOURCE_GROUP" --name "$VM_NAME" -o none 2>/dev/null; then
   echo "La VM '$VM_NAME' ya existe. Validando compatibilidad antes de reutilizarla..."
   EXISTING_SIZE="$(az vm show --resource-group "$RESOURCE_GROUP" --name "$VM_NAME" --query "hardwareProfile.vmSize" -o tsv)"
-  EXISTING_SKU="$(az vm show --resource-group "$RESOURCE_GROUP" --name "$VM_NAME" --query "storageProfile.imageReference.sku" -o tsv)"
+  # La version de Ubuntu vive en el campo "offer" (p.ej. "ubuntu-24_04-lts"),
+  # NO en "sku" (que para el offer de Canonical suele ser solo "server").
+  # Verificar "sku" aqui es un error: da falso negativo con la VM real.
+  EXISTING_OFFER="$(az vm show --resource-group "$RESOURCE_GROUP" --name "$VM_NAME" --query "storageProfile.imageReference.offer" -o tsv)"
   if [[ "$EXISTING_SIZE" != "$RESOLVED_VM_SIZE" ]]; then
     echo "ERROR: la VM '$VM_NAME' existe con tamaño '$EXISTING_SIZE', distinto al esperado '$RESOLVED_VM_SIZE'." >&2
     echo "No se recrea automáticamente. Borra la VM (destroy-lab-resources.sh) o ajusta VM_SIZE para que coincida." >&2
     exit 1
   fi
-  if [[ "$EXISTING_SKU" != *"24_04"* && "$EXISTING_SKU" != *"24.04"* ]]; then
-    echo "ERROR: la VM '$VM_NAME' existe pero su imagen (sku='$EXISTING_SKU') no parece Ubuntu 24.04." >&2
+  if [[ "$EXISTING_OFFER" != *"24_04"* && "$EXISTING_OFFER" != *"24.04"* ]]; then
+    echo "ERROR: la VM '$VM_NAME' existe pero su imagen (offer='$EXISTING_OFFER') no parece Ubuntu 24.04." >&2
     echo "No se recrea automáticamente para evitar pérdida de datos. Revisa manualmente." >&2
     exit 1
   fi
-  echo "VM existente compatible (tamaño=$EXISTING_SIZE, sku=$EXISTING_SKU). Se reutiliza."
+  echo "VM existente compatible (tamaño=$EXISTING_SIZE, offer=$EXISTING_OFFER). Se reutiliza."
 else
   echo "Creando VM '$VM_NAME' (Ubuntu 24.04, tamaño $RESOLVED_VM_SIZE)..."
   az vm create \
