@@ -219,6 +219,15 @@ services:
     env_file: .env
     environment:
       OTEL_SERVICE_NAME: payment-service
+    ports:
+      # Publicado SOLO en loopback (127.0.0.1), nunca en la interfaz publica.
+      # scripts/inject-fault.sh y recover.sh corren en el host de la VM (por
+      # SSH, fuera de cualquier contenedor) y necesitan `localhost:8001` para
+      # llamar la API admin (/admin/fault). El binding a 127.0.0.1 la deja
+      # inalcanzable desde la red (el NSG no aplica a loopback), cumpliendo
+      # "endpoint administrativo nunca expuesto" sin bloquear la operacion
+      # local de la demo.
+      - "127.0.0.1:8001:8001"
     depends_on:
       otel-collector:
         condition: service_started
@@ -277,6 +286,12 @@ services:
     env_file: .env
     environment:
       PROMETHEUS_URL: http://prometheus:9090
+    ports:
+      # Publicado SOLO en loopback (127.0.0.1). scripts/demo-reset.sh corre
+      # en el host de la VM (por SSH) y necesita `localhost:9200` para llamar
+      # POST /admin/reset-accumulator. Igual que en prometheus/payment-service:
+      # inalcanzable desde la red, solo desde el propio host.
+      - "127.0.0.1:9200:9200"
     depends_on:
       prometheus:
         condition: service_healthy
