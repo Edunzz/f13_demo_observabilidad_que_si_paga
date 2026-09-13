@@ -242,7 +242,12 @@ while true; do
     for id in ${ids}; do
         name="$(docker inspect --format '{{.Name}}' "${id}" | sed 's#^/##')"
         status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}sin-healthcheck{{end}}' "${id}")"
-        if [[ "${status}" != "healthy" ]]; then
+        # "sin-healthcheck" es el estado ESPERADO y documentado en compose.yaml
+        # para load-generator (cliente en loop, sin endpoint HTTP propio) y
+        # otel-collector (imagen distroless sin shell/curl/wget para un
+        # healthcheck exec-based) — no es una falla, así que no debe bloquear
+        # la espera. Solo "starting" o "unhealthy" cuentan como no listos.
+        if [[ "${status}" != "healthy" && "${status}" != "sin-healthcheck" ]]; then
             all_healthy=false
             unhealthy="${unhealthy} ${name}:${status}"
         fi

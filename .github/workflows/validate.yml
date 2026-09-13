@@ -141,14 +141,32 @@ jobs:
 
       - name: Esperar healthchecks (timeout 5 min)
         run: |
+          # NOTA: no usamos `docker compose ps --format '{{.Health}}'` con un
+          # grep -v 'healthy' sobre el texto, porque para un contenedor SIN
+          # healthcheck definido (load-generator, otel-collector; ver
+          # compose.yaml) esa columna sale vacia pero la linea completa NO
+          # esta vacia (tiene el nombre), asi que nunca calificaba como
+          # "healthy" y el loop siempre agotaba el timeout de 5 minutos aunque
+          # todo estuviera realmente arriba. Se usa `docker inspect` por
+          # contenedor y se trata "sin healthcheck" como aceptable (igual que
+          # en scripts/remote-install.sh).
           deadline=$((SECONDS + 300))
           while [ $SECONDS -lt $deadline ]; do
-            unhealthy=$(docker compose ps --format '{{.Name}} {{.Health}}' | grep -v 'healthy' | grep -v '^$' || true)
-            if [ -z "$unhealthy" ]; then
-              echo "Todos los servicios estan healthy."
+            all_healthy=true
+            unhealthy=""
+            for id in $(docker compose ps -q); do
+              name=$(docker inspect --format '{{.Name}}' "$id" | sed 's#^/##')
+              status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}sin-healthcheck{{end}}' "$id")
+              if [ "$status" != "healthy" ] && [ "$status" != "sin-healthcheck" ]; then
+                all_healthy=false
+                unhealthy="$unhealthy $name:$status"
+              fi
+            done
+            if [ "$all_healthy" = "true" ]; then
+              echo "Todos los servicios estan healthy (o sin healthcheck por diseno)."
               break
             fi
-            echo "Esperando healthchecks..."
+            echo "Esperando healthchecks...$unhealthy"
             sleep 5
           done
           docker compose ps
