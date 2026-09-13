@@ -20,6 +20,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@2.0.0
+        env:
+          # -x: sigue los `source`/`.` hacia otros scripts del propio repo
+          # (p.ej. scripts/lib/common.sh), evitando el falso positivo SC1091
+          # "not following" que aparece sin este flag.
+          SHELLCHECK_OPTS: -x
         with:
           scandir: "."
           ignore_paths: ".git"

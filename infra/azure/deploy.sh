@@ -33,7 +33,10 @@ ADMIN_CIDR="${ADMIN_CIDR:-}"           # si vacío, se calcula IP pública actua
 AUTO_SHUTDOWN_TIME="${AUTO_SHUTDOWN_TIME:-1900}"       # HHMM
 AUTO_SHUTDOWN_TIMEZONE="${AUTO_SHUTDOWN_TIMEZONE:-America/Bogota}"
 
-TAGS="project=f13-demo owner=JoseRomero purpose=observabilidad-que-si-paga environment=demo"
+# Array (no string) para que las expansiones "${TAGS[@]}" mas abajo pasen cada
+# tag como un argumento separado a `az`, sin depender de word-splitting
+# implicito sobre una variable sin comillas (shellcheck SC2086).
+TAGS=(project=f13-demo owner=JoseRomero purpose=observabilidad-que-si-paga environment=demo)
 
 # Lista fija de tamaños equivalentes a probar si VM_SIZE no está disponible en
 # la región (Paso 4). Se registra siempre cuál se usó y por qué.
@@ -253,7 +256,7 @@ else
     --resource-group "$RESOURCE_GROUP" --name "$VNET_NAME" --location "$LOCATION" \
     --address-prefix 10.13.0.0/16 \
     --subnet-name "$SUBNET_NAME" --subnet-prefix 10.13.1.0/24 \
-    --tags $TAGS \
+    --tags "${TAGS[@]}" \
     -o none
 fi
 if ! az network vnet subnet show --resource-group "$RESOURCE_GROUP" --vnet-name "$VNET_NAME" --name "$SUBNET_NAME" -o none 2>/dev/null; then
@@ -331,7 +334,7 @@ else
   echo "Creando NSG '$NSG_NAME'..."
   az network nsg create \
     --resource-group "$RESOURCE_GROUP" --name "$NSG_NAME" --location "$LOCATION" \
-    --tags $TAGS \
+    --tags "${TAGS[@]}" \
     -o none
   for i in "${!RULE_NAMES[@]}"; do
     create_nsg_rule "${RULE_NAMES[$i]}" "${RULE_PORTS[$i]}" "${RULE_PRIORITIES[$i]}"
@@ -350,7 +353,7 @@ else
   az network public-ip create \
     --resource-group "$RESOURCE_GROUP" --name "$PUBLIC_IP_NAME" --location "$LOCATION" \
     --sku Standard --allocation-method Static \
-    --tags $TAGS \
+    --tags "${TAGS[@]}" \
     -o none
 fi
 
@@ -368,7 +371,7 @@ else
     --vnet-name "$VNET_NAME" --subnet "$SUBNET_NAME" \
     --network-security-group "$NSG_NAME" \
     --public-ip-address "$PUBLIC_IP_NAME" \
-    --tags $TAGS \
+    --tags "${TAGS[@]}" \
     -o none
 fi
 
@@ -408,7 +411,7 @@ else
     --ssh-key-values "$SSH_PUBLIC_KEY_PATH" \
     --authentication-type ssh \
     --custom-data "$SCRIPT_DIR/cloud-init.yaml" \
-    --tags $TAGS \
+    --tags "${TAGS[@]}" \
     -o none
 fi
 
