@@ -114,5 +114,16 @@ service:
     # por :8889.
     logs:
       level: info
+    # A partir de las versiones recientes del Collector, `metrics.address`
+    # quedo obsoleto: la telemetria propia se configura como un "reader" al
+    # estilo SDK de OpenTelemetry (ver CHANGELOG de opentelemetry-collector,
+    # migracion de service::telemetry::metrics). Este es el reemplazo directo
+    # para seguir exponiendo las metricas propias del Collector en :8888.
     metrics:
-      address: 0.0.0.0:8888
+      level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: "0.0.0.0"
+                port: 8888

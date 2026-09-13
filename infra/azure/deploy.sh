@@ -421,10 +421,31 @@ fi
 echo
 echo "=== Paso 10: auto-shutdown ==="
 echo "Configurando apagado automático a las $AUTO_SHUTDOWN_TIME ($AUTO_SHUTDOWN_TIMEZONE)..."
-az vm auto-shutdown \
+# Algunas versiones de az CLI no exponen `--timezone` en `az vm auto-shutdown`
+# (el comando solo acepta --time en UTC en esas versiones). Se intenta primero
+# con --timezone; si el CLI local no lo reconoce, se reintenta solo en UTC y
+# se avisa claramente para que el operador ajuste AUTO_SHUTDOWN_TIME si hace
+# falta una hora local exacta.
+if ! az vm auto-shutdown \
   --resource-group "$RESOURCE_GROUP" --name "$VM_NAME" \
   --time "$AUTO_SHUTDOWN_TIME" --timezone "$AUTO_SHUTDOWN_TIMEZONE" \
-  -o none
+  -o none 2>/tmp/f13-autoshutdown-err.$$; then
+  if grep -q "unrecognized arguments.*--timezone\|unrecognized arguments.*--time-zone" /tmp/f13-autoshutdown-err.$$ 2>/dev/null; then
+    echo "AVISO: esta versión de az CLI no admite --timezone en 'az vm auto-shutdown'." >&2
+    echo "       Reintentando solo con --time (interpretado como UTC)." >&2
+    az vm auto-shutdown \
+      --resource-group "$RESOURCE_GROUP" --name "$VM_NAME" \
+      --time "$AUTO_SHUTDOWN_TIME" \
+      -o none
+    echo "AVISO: auto-shutdown configurado a las ${AUTO_SHUTDOWN_TIME} UTC (NO en $AUTO_SHUTDOWN_TIMEZONE)." >&2
+    echo "       Ajusta AUTO_SHUTDOWN_TIME manualmente si necesitas una hora local exacta." >&2
+  else
+    cat /tmp/f13-autoshutdown-err.$$ >&2
+    rm -f /tmp/f13-autoshutdown-err.$$
+    exit 1
+  fi
+fi
+rm -f /tmp/f13-autoshutdown-err.$$
 
 # ==============================================================================
 # Paso 11: esperar a que la VM esté en estado 'running'
