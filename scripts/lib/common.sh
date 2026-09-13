@@ -148,7 +148,19 @@ ssh_exec() {
         log_error "ssh_exec: ADMIN_USER/PUBLIC_IP no están definidos (¿olvidaste load_state_file?)"
         return 1
     fi
-    ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${ADMIN_USER}@${PUBLIC_IP}" "$@"
+    # SSH_PRIVATE_KEY_PATH lo escribe infra/azure/deploy.sh en el estado
+    # (derivado de SSH_PUBLIC_KEY_PATH). Sin `-i` explícito, ssh solo intenta
+    # las rutas por defecto (id_rsa/id_ecdsa/id_ed25519) o un ssh-agent
+    # cargado, y falla en silencio si la clave del laboratorio tiene otro
+    # nombre. Se pasa `-i` solo si la variable está definida y el archivo
+    # existe, para no romper estados generados antes de este cambio (en ese
+    # caso se mantiene el comportamiento anterior, basado en ssh-agent/rutas
+    # por defecto).
+    local -a _ssh_identity_opts=()
+    if [[ -n "${SSH_PRIVATE_KEY_PATH:-}" && -f "${SSH_PRIVATE_KEY_PATH}" ]]; then
+        _ssh_identity_opts=(-i "${SSH_PRIVATE_KEY_PATH}")
+    fi
+    ssh "${_ssh_identity_opts[@]}" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${ADMIN_USER}@${PUBLIC_IP}" "$@"
 }
 
 # ssh_repo <comando remoto...>

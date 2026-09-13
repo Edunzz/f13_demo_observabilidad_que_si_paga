@@ -107,10 +107,19 @@ if [[ "$TCP_OK" -ne 1 ]]; then
   exit 1
 fi
 
+# SSH_PRIVATE_KEY_PATH lo escribe deploy.sh en el estado (derivado de
+# SSH_PUBLIC_KEY_PATH, sin el sufijo .pub). Sin `-i` explícito, ssh solo
+# prueba rutas por defecto (id_rsa/id_ecdsa/id_ed25519) o un ssh-agent
+# cargado, y falla si la clave del laboratorio tiene otro nombre.
+_SSH_IDENTITY_OPTS=()
+if [[ -n "${SSH_PRIVATE_KEY_PATH:-}" && -f "${SSH_PRIVATE_KEY_PATH:-}" ]]; then
+  _SSH_IDENTITY_OPTS=(-i "$SSH_PRIVATE_KEY_PATH")
+fi
+
 echo "Verificando SSH real..."
 SSH_OK=0
 for attempt in $(seq 1 10); do
-  if ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes \
+  if ssh "${_SSH_IDENTITY_OPTS[@]}" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes \
        "${ADMIN_USER}@${PUBLIC_IP}" 'echo ok' &>/dev/null; then
     SSH_OK=1
     echo "SSH OK."
@@ -126,4 +135,8 @@ fi
 
 echo
 echo "VM '$VM_NAME' arriba y accesible."
-echo "ssh ${ADMIN_USER}@${PUBLIC_IP}"
+if [[ -n "${SSH_PRIVATE_KEY_PATH:-}" ]]; then
+  echo "ssh -i ${SSH_PRIVATE_KEY_PATH} ${ADMIN_USER}@${PUBLIC_IP}"
+else
+  echo "ssh ${ADMIN_USER}@${PUBLIC_IP}"
+fi

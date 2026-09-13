@@ -80,7 +80,11 @@ az network nsg rule list --resource-group "$RESOURCE_GROUP" --nsg-name "$NSG_NAM
 echo
 echo "=== Comando SSH ==="
 if [[ -n "${PUBLIC_IP:-}" ]]; then
-  echo "ssh ${ADMIN_USER}@${PUBLIC_IP}"
+  if [[ -n "${SSH_PRIVATE_KEY_PATH:-}" ]]; then
+    echo "ssh -i ${SSH_PRIVATE_KEY_PATH} ${ADMIN_USER}@${PUBLIC_IP}"
+  else
+    echo "ssh ${ADMIN_USER}@${PUBLIC_IP}"
+  fi
 else
   echo "No hay IP pública asignada todavía (la VM puede estar desasignada/deallocated)."
 fi

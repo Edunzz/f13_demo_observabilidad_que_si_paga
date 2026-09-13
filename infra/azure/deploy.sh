@@ -185,6 +185,19 @@ if ! grep -q '^ssh-' "$SSH_PUBLIC_KEY_PATH"; then
 fi
 echo "Clave SSH pública OK: $SSH_PUBLIC_KEY_PATH"
 
+# Convención estándar de ssh-keygen: la clave privada es la pública sin el
+# sufijo ".pub". Se usa explícitamente con `ssh -i` en todo el repo (aquí y
+# en scripts/lib/common.sh) porque SSH_PUBLIC_KEY_PATH casi nunca es una de
+# las rutas por defecto que un cliente SSH intenta automáticamente
+# (id_rsa/id_ecdsa/id_ed25519) — sin `-i` explícito, la conexión fallaría o
+# dependería de que el operador tenga la clave cargada en un ssh-agent.
+SSH_PRIVATE_KEY_PATH="${SSH_PUBLIC_KEY_PATH%.pub}"
+if [[ ! -f "$SSH_PRIVATE_KEY_PATH" ]]; then
+  echo "ERROR: no se encontró la clave privada correspondiente en '$SSH_PRIVATE_KEY_PATH'" >&2
+  echo "(se esperaba junto a la pública, sin el sufijo .pub)." >&2
+  exit 1
+fi
+
 if [[ -n "$ADMIN_CIDR" ]]; then
   if ! is_valid_cidr "$ADMIN_CIDR"; then
     echo "ERROR: ADMIN_CIDR='$ADMIN_CIDR' no tiene formato CIDR IPv4 válido (ej. 203.0.113.5/32)." >&2
@@ -501,18 +514,19 @@ fi
 
 echo "Verificando SSH real..."
 SSH_OK=0
-for attempt in $(seq 1 10); do
-  if ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes \
+SSH_MAX_ATTEMPTS=20
+for attempt in $(seq 1 "$SSH_MAX_ATTEMPTS"); do
+  if ssh -i "$SSH_PRIVATE_KEY_PATH" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes \
        "${ADMIN_USER}@${PUBLIC_IP}" 'echo ok' &>/dev/null; then
     SSH_OK=1
     echo "SSH OK."
     break
   fi
-  echo "  intento $attempt/10: SSH no disponible aún. Esperando 15s..."
+  echo "  intento $attempt/$SSH_MAX_ATTEMPTS: SSH no disponible aún. Esperando 15s..."
   sleep 15
 done
 if [[ "$SSH_OK" -ne 1 ]]; then
-  echo "ERROR: no se pudo conectar por SSH tras varios intentos." >&2
+  echo "ERROR: no se pudo conectar por SSH tras varios intentos (posiblemente cloud-init todavía esta arrancando; reintenta con infra/azure/status.sh / start.sh en unos minutos)." >&2
   exit 1
 fi
 
@@ -533,6 +547,7 @@ STATE_FILE="$SCRIPT_DIR/../../.f13demo-state.env"
   echo "PUBLIC_IP_NAME=$PUBLIC_IP_NAME"
   echo "NIC_NAME=$NIC_NAME"
   echo "ADMIN_CIDR=$ADMIN_CIDR"
+  echo "SSH_PRIVATE_KEY_PATH=$SSH_PRIVATE_KEY_PATH"
 } > "$STATE_FILE"
 echo "Estado guardado en $STATE_FILE (sin secretos, ya está en .gitignore)."
 
@@ -542,7 +557,7 @@ echo "Estado guardado en $STATE_FILE (sin secretos, ya está en .gitignore)."
 echo
 echo "=== Paso 14: acceso ==="
 echo "Comando SSH:"
-echo "  ssh ${ADMIN_USER}@${PUBLIC_IP}"
+echo "  ssh -i ${SSH_PRIVATE_KEY_PATH} ${ADMIN_USER}@${PUBLIC_IP}"
 echo
 echo "URLs (una vez que el stack esté levantado en la VM):"
 echo "  App:     http://${PUBLIC_IP}:8080"

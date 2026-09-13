@@ -137,16 +137,32 @@ log_info "OK: shop-api /checkout -> 200 con campo \"outcome\""
 # 3. Prometheus (solo en modo localhost, dentro de la VM) ------------------------
 if [[ "${TARGET_HOST}" == "localhost" || "${TARGET_HOST}" == "127.0.0.1" ]]; then
     log_info "3/5: verificando métricas f13_* en Prometheus (http://localhost:${PROMETHEUS_PORT})"
+    # Reintenta con espera: aunque el checkout de arriba ya ocurrió y los
+    # contenedores ya pasaron su healthcheck, la propagación completa tarda
+    # unos segundos (scrape_interval de Prometheus -> ciclo de poll de
+    # value-exporter -> siguiente scrape de sus métricas derivadas). Fallar
+    # en el primer intento sin reintentar reporta un falso negativo justo
+    # después de un despliegue/arranque en frío.
+    METRICS_MAX_ATTEMPTS=12
+    METRICS_RETRY_SECONDS=5
     missing_metrics=()
-    for metric in "${REQUIRED_METRICS[@]}"; do
-        # `|| true` deliberado: si curl falla (p. ej. timeout), dejamos
-        # query_result vacío a propósito; el chequeo de abajo lo trata igual
-        # que "métrica ausente" y lo reporta en missing_metrics (no se oculta).
-        query_result="$(curl -s -m "${CURL_TIMEOUT}" -G --data-urlencode "query=${metric}" \
-            "http://localhost:${PROMETHEUS_PORT}/api/v1/query" || true)"
-        if [[ -z "${query_result}" ]] || ! grep -q '"result":\[.\+\]' <<<"${query_result}"; then
-            missing_metrics+=("${metric}")
+    for attempt in $(seq 1 "${METRICS_MAX_ATTEMPTS}"); do
+        missing_metrics=()
+        for metric in "${REQUIRED_METRICS[@]}"; do
+            # `|| true` deliberado: si curl falla (p. ej. timeout), dejamos
+            # query_result vacío a propósito; el chequeo de abajo lo trata igual
+            # que "métrica ausente" y lo reporta en missing_metrics (no se oculta).
+            query_result="$(curl -s -m "${CURL_TIMEOUT}" -G --data-urlencode "query=${metric}" \
+                "http://localhost:${PROMETHEUS_PORT}/api/v1/query" || true)"
+            if [[ -z "${query_result}" ]] || ! grep -q '"result":\[.\+\]' <<<"${query_result}"; then
+                missing_metrics+=("${metric}")
+            fi
+        done
+        if [[ "${#missing_metrics[@]}" -eq 0 ]]; then
+            break
         fi
+        log_info "  intento ${attempt}/${METRICS_MAX_ATTEMPTS}: faltan ${missing_metrics[*]}; esperando ${METRICS_RETRY_SECONDS}s..."
+        sleep "${METRICS_RETRY_SECONDS}"
     done
     if [[ "${#missing_metrics[@]}" -gt 0 ]]; then
         fail "Prometheus no tiene (o aún no scrapeó) estas métricas requeridas: ${missing_metrics[*]}"
