@@ -7,7 +7,7 @@ versión estable vigente. Nunca se usa la etiqueta `latest`.
 
 | Componente | Versión fijada | Notas |
 |---|---|---|
-| Devcontainer (GitHub Codespaces) | `mcr.microsoft.com/devcontainers/python:1-3.12-bookworm` | Imagen base del Codespace (Debian 12 + Python 3.12). Ver `.devcontainer/devcontainer.json` |
+| Devcontainer (GitHub Codespaces) | `mcr.microsoft.com/devcontainers/python:1-3.12-bookworm` | Imagen base del Codespace (Debian 12 + Python 3.12), extendida en `.devcontainer/Dockerfile` (quita el repo APT de Yarn con llave GPG vencida). Ver `.devcontainer/devcontainer.json` |
 | Docker dentro del Codespace | feature `ghcr.io/devcontainers/features/docker-in-docker:2` | Docker Engine + plugin Compose v2 dentro del devcontainer |
 | Python (imágenes de `app/*`) | `python:3.12-slim` | Ver Dockerfiles de cada servicio en `app/` |
 | otel-collector | `otel/opentelemetry-collector-contrib:0.160.0` | Verificado en Docker Hub, septiembre 2026 |

@@ -13,7 +13,7 @@ ciclo de vida que levanta el laboratorio, los puertos y el archivo `.env`.
 
 | Elemento | Valor | Para qué |
 |---|---|---|
-| Imagen | `mcr.microsoft.com/devcontainers/python:1-3.12-bookworm` | Debian 12 con Python 3.12, `make`, `curl`, `git` |
+| Imagen | `.devcontainer/Dockerfile` sobre `mcr.microsoft.com/devcontainers/python:1-3.12-bookworm` | Debian 12 con Python 3.12, `make`, `curl`, `git`. El Dockerfile solo quita el repositorio APT de Yarn de la imagen base, cuya llave GPG ya no verifica y rompía la instalación de Docker-in-Docker |
 | Feature | `docker-in-docker:2` | Docker Engine + Compose v2 **dentro** del Codespace |
 | Feature | `github-cli:1` | `gh`, usado por `scripts/publish-ports.sh` |
 | `hostRequirements` | 2 CPU, 8 GB, 32 GB | Mínimo para los 8 contenedores |

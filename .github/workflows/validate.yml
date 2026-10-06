@@ -153,7 +153,10 @@ jobs:
         run: |
           bash scripts/recover.sh
           bash scripts/demo-reset.sh
-          bash scripts/business-snapshot.sh
+          # El acumulador debe quedar en 0 tras el reset (se lee directo de
+          # value-exporter, sin el retraso de scrape de Prometheus).
+          sleep 6
+          curl -s http://localhost:9200/metrics | grep -E '^f13_business_estimated_loss_usd_total 0(\.0+)?$'
 
       - name: Volcar logs si algo fallo
         if: failure()

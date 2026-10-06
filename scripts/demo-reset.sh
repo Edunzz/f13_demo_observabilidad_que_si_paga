@@ -12,14 +12,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 install_error_trap
 
+# Un ciclo de polling de value-exporter (POLL_INTERVAL_SECONDS=5) + margen.
+VALUE_EXPORTER_POLL_SECONDS=6
+
 usage() {
     cat <<'EOF'
 Uso: bash scripts/demo-reset.sh [-h|--help]
 
 Deja el entorno listo para repetir la demo, en este orden:
   1. Ejecuta scripts/recover.sh (desactiva la falla, sin reiniciar el stack)
-  2. Reinicia el acumulador financiero: POST /admin/reset-accumulator en
-     value-exporter (localhost:9200, publicado solo en 127.0.0.1)
+  2. Espera a que Prometheus vea la falla apagada (y un ciclo de polling de
+     value-exporter) y reinicia el acumulador financiero:
+     POST /admin/reset-accumulator en value-exporter (localhost:9200,
+     publicado solo en 127.0.0.1)
   3. Corre scripts/smoke-test.sh para confirmar estado saludable
 EOF
 }
@@ -47,7 +52,23 @@ log_info "Paso 1/3: recuperando falla (scripts/recover.sh)..."
 bash "${SCRIPT_DIR}/recover.sh"
 
 # --- 2. Reiniciar acumulador financiero -----------------------------------------
-log_info "Paso 2/3: reiniciando acumulador financiero (value-exporter, POST /admin/reset-accumulator)..."
+# value-exporter solo acumula pérdida mientras Prometheus reporta
+# f13_fault_active=1, y Prometheus lo ve con hasta un scrape (5 s) de retraso.
+# Si reseteamos antes, el acumulador vuelve a sumar unos segundos. Esperamos a
+# que Prometheus vea la falla apagada y a un ciclo de polling de value-exporter.
+prometheus_sees_fault_off() {
+    local result
+    result="$(curl -s -m 5 -G --data-urlencode 'query=max(f13_fault_active)' \
+        "http://${TARGET_HOST}:${PROMETHEUS_PORT}/api/v1/query" || true)"
+    grep -qE '"value":\[[0-9.]+,"0"\]' <<<"${result}"
+}
+log_info "Paso 2/3: esperando a que Prometheus refleje f13_fault_active=0..."
+if ! retry 10 2 prometheus_sees_fault_off; then
+    log_error "Prometheus sigue viendo la falla activa. Revisa: bash scripts/status.sh"
+    exit 1
+fi
+sleep "${VALUE_EXPORTER_POLL_SECONDS}"
+log_info "Reiniciando acumulador financiero (value-exporter, POST /admin/reset-accumulator)..."
 reset_code="$(curl -s -m 10 -o /dev/null -w '%{http_code}' -X POST \
     "http://${TARGET_HOST}:${VALUE_EXPORTER_PORT}/admin/reset-accumulator" || echo "000")"
 if [[ "${reset_code}" != "200" ]]; then
