@@ -117,6 +117,24 @@ corrida con `scripts/demo-reset.sh` (`POST /admin/reset-accumulator` en `value-e
 interno), por lo que el valor que el público ve depende exactamente de cuánto tiempo estuvo activa la
 falla durante esa demo puntual — no es un valor fijo.
 
+## Por qué en el Codespace ves cifras menores que en este ejemplo
+
+Los ejemplos de arriba suponen tráfico **constante** de 120 checkouts/min. En el laboratorio,
+`value-exporter` usa el tráfico **observado** en Prometheus (ventana de 1 minuto), y `load-generator` es
+un único cliente secuencial: envía una compra, espera la respuesta y duerme 0.5 s. Con 1.8 s de latencia
+extra por compra, su ritmo cae de ~120 a ~26 checkouts/min, así que con los mismos supuestos:
+
+```text
+ingreso_en_riesgo_usd_min   ≈ 0.30 * 26 * 50              ≈ 390 USD/min
+perdida_degradacion_usd_min ≈ 0.25 * (26 * 0.70) * 50     ≈ 228 USD/min
+```
+
+Ese es el orden de magnitud que muestra `bash scripts/business-snapshot.sh` un minuto después de
+`inject-fault.sh` (los primeros segundos son menores porque la ventana todavía mezcla tráfico sano). En
+un sistema real, los usuarios siguen llegando aunque el servicio esté lento (carga "abierta"), así que el
+ejemplo de 1 800 USD/min es la referencia correcta; la diferencia es, en sí misma, un buen punto para la
+charla: la latencia también reduce el tráfico que logras atender.
+
 ## Panel de supuestos en los dashboards
 
 El dashboard **"F13 | Impacto en el negocio"** incluye un panel de texto fijo, "Nota sobre los valores

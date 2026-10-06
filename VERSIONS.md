@@ -1,13 +1,14 @@
 # Versiones resueltas
 
-Este archivo documenta las versiones concretas fijadas en `compose.yaml` y en las
-imágenes base de los Dockerfiles del repositorio. Se actualiza cada vez que una
+Este archivo documenta las versiones concretas fijadas en `compose.yaml`, en el
+devcontainer de Codespaces y en las imágenes base de los Dockerfiles del repositorio. Se actualiza cada vez que una
 versión pinneada deja de existir o de ser soportada y se resuelve a una nueva
 versión estable vigente. Nunca se usa la etiqueta `latest`.
 
 | Componente | Versión fijada | Notas |
 |---|---|---|
-| Ubuntu (VM Azure) | 24.04 LTS (`Ubuntu2404` en `az vm create --image`) | Requisito obligatorio del laboratorio |
+| Devcontainer (GitHub Codespaces) | `mcr.microsoft.com/devcontainers/python:1-3.12-bookworm` | Imagen base del Codespace (Debian 12 + Python 3.12). Ver `.devcontainer/devcontainer.json` |
+| Docker dentro del Codespace | feature `ghcr.io/devcontainers/features/docker-in-docker:2` | Docker Engine + plugin Compose v2 dentro del devcontainer |
 | Python (imágenes de `app/*`) | `python:3.12-slim` | Ver Dockerfiles de cada servicio en `app/` |
 | otel-collector | `otel/opentelemetry-collector-contrib:0.160.0` | Verificado en Docker Hub, septiembre 2026 |
 | Prometheus | `prom/prometheus:v3.14.0` | Verificado en Docker Hub, septiembre 2026 |
@@ -20,7 +21,7 @@ versión estable vigente. Nunca se usa la etiqueta `latest`.
 1. Verifica la versión estable vigente en el registro oficial del proyecto (Docker Hub / GitHub Releases).
 2. Actualiza la etiqueta en `compose.yaml` (y en el `Dockerfile` correspondiente si aplica).
 3. Actualiza la fila correspondiente en esta tabla, incluyendo la fecha de verificación.
-4. Vuelve a correr `docker compose config --quiet`, `docker compose build --pull` y la suite de smoke tests antes de publicar el cambio.
+4. Vuelve a correr `bash scripts/lab-up.sh` (valida `compose.yaml`, construye, levanta y ejecuta el smoke test) en un Codespace antes de publicar el cambio; el CI (`.github/workflows/validate.yml`) repite esa misma validación.
 
 ## Dependencias Python fijadas
 

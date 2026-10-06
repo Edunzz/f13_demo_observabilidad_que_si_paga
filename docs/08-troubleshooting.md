@@ -1,45 +1,46 @@
 # 08. Troubleshooting
 
-Tabla de problemas comunes del laboratorio F13 y cómo resolverlos. Todos los comandos indican
-`[LOCAL]` o `[VM f13demo]`.
+Problemas comunes del laboratorio F13 en GitHub Codespaces y cómo resolverlos. Todos los comandos se
+ejecutan en la terminal del Codespace, desde la raíz del repo.
 
 | Problema | Síntoma | Causa probable | Solución |
 |---|---|---|---|
-| `cloud-init` no termina | `scripts/remote-install.sh` se queda esperando en el Paso 3 ("esperando a que cloud-init termine") | Primer arranque de la VM aún instalando paquetes/Docker, o un paso de `runcmd` falló | Espera unos minutos más (el primer arranque puede tardar 3–5 min). Si sigue sin terminar, conéctate y revisa el log: `ssh azureuser@<PUBLIC_IP> "sudo tail -100 /var/log/f13demo-cloud-init.log"` `[LOCAL]`, y el estado exacto con `ssh azureuser@<PUBLIC_IP> "sudo cloud-init status --long"` `[LOCAL]`. |
-| `docker compose` falla por versión | `remote-install.sh` falla en el Paso 6/12 ("docker compose (plugin v2) no está disponible") | El plugin Compose v2 no quedó instalado, o `install-docker.sh` de cloud-init falló a mitad de camino | `ssh azureuser@<PUBLIC_IP> "docker compose version"` `[LOCAL]` para confirmar. Si falta, reinstala manualmente siguiendo la guía oficial: https://docs.docker.com/engine/install/ubuntu/ `[VM f13demo]`, luego vuelve a correr `remote-install.sh` `[LOCAL]`. |
-| Healthcheck no pasa | `remote-install.sh` falla en el Paso 10/12 ("Timeout esperando healthchecks") | Un contenedor específico no llegó a estado `healthy` dentro de los 5 minutos | Identifica cuál con `ssh azureuser@<PUBLIC_IP> "cd /opt/f13demo/repo && docker compose ps"` `[LOCAL]`, revisa sus logs con `docker compose logs --tail=100 <servicio>` `[VM f13demo]`, y considera correr `bash scripts/collect-diagnostics.sh` `[LOCAL]` para un diagnóstico completo antes de reintentar. |
-| NSG bloquea el acceso porque cambió la IP del operador | `smoke-test.sh` o el navegador ya no llegan a la VM, pero antes funcionaban | Tu IP pública cambió (red distinta, VPN, reconexión de ISP) y las reglas del NSG siguen apuntando a la IP anterior | Vuelve a ejecutar `bash infra/azure/deploy.sh` `[LOCAL]`: el Paso 6 detecta automáticamente la IP nueva y actualiza solo el origen de las 4 reglas del NSG existentes, sin recrear nada más (ver `docs/02-despliegue-azure.md`). |
-| Grafana no muestra los dashboards | Grafana carga pero las carpetas/dashboards "F13 \| Salud técnica" y "F13 \| Impacto en el negocio" no aparecen | El provisioning de dashboards/datasources no se montó o falló al parsear el JSON | Revisa `ssh azureuser@<PUBLIC_IP> "cd /opt/f13demo/repo && docker compose logs grafana \| grep -i provisioning"` `[VM f13demo]`. Confirma que los volúmenes `./observability/grafana/provisioning:/etc/grafana/provisioning:ro` y `./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro` estén montados (`docker compose config`) y que los JSON de `observability/grafana/dashboards/*.json` sean válidos. Referencia: https://grafana.com/docs/grafana/latest/administration/provisioning/ |
-| Jaeger sin trazas | La UI de Jaeger carga pero no aparecen trazas nuevas de `shop-api`/`payment-service` | `otel-collector` no está reenviando correctamente, o las apps no están exportando OTLP | Revisa `docker compose logs otel-collector` `[VM f13demo]` en busca de errores de exportación. Confirma que `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317` esté presente en `.env` remoto. El `otel-collector` no tiene healthcheck exec-based (su imagen no incluye shell/curl/wget), así que valida su extensión `health_check` interna en el puerto `13133` desde dentro de la VM: `ssh azureuser@<PUBLIC_IP> "curl -sf http://localhost:13133/ || echo FAIL"` `[LOCAL]`. |
-| `value-exporter` sin datos | Los paneles del dashboard "F13 \| Impacto en el negocio" muestran "No data" | Prometheus todavía no tiene histórico suficiente (el stack acaba de arrancar) o `value-exporter` aún no completó su primer ciclo de polling (cada 5 s) | Espera 1–2 intervalos de scrape/polling. Si persiste, confirma que `value-exporter` puede alcanzar Prometheus: `ssh azureuser@<PUBLIC_IP> "cd /opt/f13demo/repo && docker compose logs value-exporter --tail=50"` `[VM f13demo]`, buscando líneas `prometheus_query_failed`. |
-| El público no puede ver Prometheus en vivo | `smoke-test.sh` corrido `[LOCAL]` (contra la IP pública) omite el paso 3/5 de Prometheus | Comportamiento esperado, no un error: Prometheus (`9090`) nunca se publica al NSG (ver `docs/07-seguridad.md`) | Para validar Prometheus manualmente, hazlo siempre desde dentro de la VM: `TARGET_HOST=localhost bash scripts/smoke-test.sh` `[VM f13demo]` (por SSH), o abre un túnel SSH puntual si necesitas verlo desde tu navegador: `ssh -L 9090:localhost:9090 azureuser@<PUBLIC_IP>` `[LOCAL]`. |
-| No sé cómo reportar un problema que no está en esta tabla | Algo falla y no es obvio por qué | — | Ejecuta `bash scripts/collect-diagnostics.sh` `[LOCAL]` (ver siguiente sección) y adjunta el `.tar.gz` generado al reportar el problema. |
+| El laboratorio no arrancó | El Codespace abrió pero no aparecen URLs ni contenedores | El `postStartCommand` sigue corriendo (primera vez: 3–5 min) o falló | `bash scripts/status.sh`. Si no hay contenedores, corre `bash scripts/lab-up.sh` y lee el primer error que imprima. |
+| Docker no responde | `lab-up.sh` se queda en "Esperando a que el daemon de Docker esté disponible" o falla tras 120 s | El daemon de la feature Docker-in-Docker aún no inició, o el devcontainer no se construyó con ella | Espera unos segundos y reintenta. Si persiste: paleta de comandos → **Codespaces: Rebuild Container**. |
+| Healthcheck no pasa | `lab-up.sh` termina con "Timeout (300s) esperando healthchecks. No listos: …" | Un contenedor específico no llegó a `healthy` | `docker compose ps` para ver cuál, `docker compose logs --tail=100 <servicio>` para ver por qué, y `bash scripts/collect-diagnostics.sh` si necesitas compartir el diagnóstico. |
+| Sin espacio en disco | Errores `no space left on device` en el build | Imágenes viejas acumuladas tras varios rebuilds | `docker system prune -f` y vuelve a correr `bash scripts/lab-up.sh`. |
+| La URL pide iniciar sesión en GitHub | Al abrir Grafana/Jaeger desde otro navegador o compartir la URL, aparece el login de GitHub | El puerto está en visibilidad Private (por defecto en Codespaces, o `publish-ports.sh` no pudo cambiarlo) | `bash scripts/publish-ports.sh`, o pestaña **PORTS** → clic derecho en el puerto → *Port Visibility* → *Public*. Si tu organización lo prohíbe, compártelo desde tu sesión o usa puertos privados. |
+| `publish-ports.sh` falla | "No se pudo cambiar la visibilidad (¿política de tu organización?)" | Política de la organización, o el puerto aún no estaba reenviado | Reintenta en unos segundos; si es política, el laboratorio funciona igual en privado. |
+| Grafana no muestra los dashboards | Grafana carga pero no aparece la carpeta **F13** | El provisioning no se montó o un JSON es inválido | `docker compose logs grafana \| grep -i provision`. Confirma los montajes con `docker compose config` y que `observability/grafana/dashboards/*.json` sean JSON válidos. |
+| Enlaces de Grafana apuntan a `localhost` | Un enlace compartido abre `http://localhost:3000/...` | `GF_SERVER_ROOT_URL` no se ajustó al Codespace (p. ej. `.env` creado fuera de Codespaces) | `bash scripts/setup-env.sh && docker compose up -d grafana`. |
+| Jaeger sin trazas | La UI de Jaeger carga pero no aparecen `shop-api`/`payment-service` | El Collector no reenvía o las apps no exportan OTLP | `docker compose logs --tail=50 otel-collector` (errores de exportación); confirma `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317` en `.env`. El Collector no tiene healthcheck exec-based (imagen distroless); su extensión `health_check` responde en el puerto `13133` dentro de la red Docker. |
+| `value-exporter` sin datos | Paneles de "F13 \| Impacto en el negocio" en "No data" | Prometheus aún no tiene histórico o `value-exporter` no completó su primer ciclo (cada 5 s) | Espera 1–2 ciclos. Si persiste: `docker compose logs --tail=50 value-exporter`, buscando `prometheus_query_failed`. |
+| `inject-fault.sh` responde 401 | "POST /admin/fault respondió HTTP 401" | `payment-service` arrancó con un `FAULT_ADMIN_TOKEN` distinto al de `.env` (se editó `.env` sin recrear el contenedor) | `docker compose up -d payment-service` y reintenta. |
+| El smoke test falla en `/checkout` con 502 | "shop-api /checkout respondió HTTP 502" | Hay una falla activa (30% de errores) | `bash scripts/recover.sh` y repite. |
+| Las curvas no vuelven a cero tras `recover.sh` | Latencia o error rate siguen altos 1–2 minutos | Ventanas móviles de 1–5 minutos: comportamiento esperado | Espera; la pérdida acumulada no baja por diseño (es el costo total). `bash scripts/demo-reset.sh` la reinicia. |
+| El Codespace se detuvo solo | Las URLs dejan de responder tras un rato sin usarlo | Tiempo de inactividad del Codespace | Ábrelo de nuevo: `lab-up.sh` levanta el stack al arrancar. Para demos largas, sube el *idle timeout* en GitHub → Settings → Codespaces. |
 
 ## Usar `collect-diagnostics.sh`
 
 ```bash
-# [LOCAL]
 bash scripts/collect-diagnostics.sh
 ```
 
-Este script recopila, por SSH, un paquete de diagnóstico local (`.tar.gz`, ignorado por Git gracias a
-la entrada `*.tar.gz` en `.gitignore`) con, al menos:
+Genera `diagnostics/f13demo-diagnostics-<timestamp>.tar.gz` (ignorado por Git) con:
 
-- `docker compose ps` y `docker compose config` (validado).
-- Logs recientes de todos los contenedores (`docker compose logs --tail=...`).
-- Uso de disco y memoria de la VM.
-- Resultado de los endpoints de salud (`/health`, `/api/health`, etc.).
+- `docker compose ps -a` y `docker compose config` (sanitizado: se redactan líneas con PASSWORD/TOKEN/SECRET).
+- Los últimos 200 logs de cada contenedor.
+- Uso de disco y memoria del Codespace.
+- Resultado de los endpoints de salud de `shop-api`, Grafana, Jaeger, Prometheus, `payment-service` y
+  `value-exporter`.
 
-Antes de compartir el `.tar.gz` con alguien (colega, ticket de soporte, hilo de GitHub), revisa
-rápidamente su contenido: el propio script está diseñado para no incluir secretos (no captura `.env`
-ni tokens), pero siempre es buena práctica confirmarlo tú mismo antes de adjuntar cualquier archivo
-generado automáticamente.
+Antes de compartir el `.tar.gz` (issue, chat, ticket), revisa su contenido: el script no lee `.env` y
+redacta lo que parezca credencial, pero confirmarlo tú mismo es buena práctica.
 
 ## Referencias
 
-- `cloud-init` — estado y logs: https://cloudinit.readthedocs.io/en/latest/howto/debugging.html
+- Codespaces — solución de problemas: https://docs.github.com/codespaces/troubleshooting
 - Docker Compose — comandos (`ps`, `logs`, `config`): https://docs.docker.com/compose/
-- OpenTelemetry Collector — configuración y troubleshooting: https://opentelemetry.io/docs/collector/
-- Prometheus — consultas y almacenamiento: https://prometheus.io/docs/
+- OpenTelemetry Collector — troubleshooting: https://opentelemetry.io/docs/collector/troubleshooting/
 - Grafana — provisioning: https://grafana.com/docs/grafana/latest/administration/provisioning/
 - Jaeger / OTLP: https://www.jaegertracing.io/docs/ y https://opentelemetry.io/docs/specs/otlp/

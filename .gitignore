@@ -1,5 +1,4 @@
 .env
-.f13demo-state.env
 *.pem
 *.key
 id_rsa
@@ -10,6 +9,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+.venv-*/
 venv/
 node_modules/
 *.log

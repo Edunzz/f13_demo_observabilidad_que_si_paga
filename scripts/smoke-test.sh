@@ -1,25 +1,10 @@
 #!/usr/bin/env bash
-# [LOCAL o VM f13demo] Smoke test del laboratorio F13. Modo dual:
-#
-#   - Corrido en la máquina del operador (LOCAL): prueba contra la IP pública
-#     de la VM (TARGET_HOST=<PUBLIC_IP>, tomado de .f13demo-state.env si no
-#     se exporta explícitamente). Solo valida lo expuesto a Internet: 8080,
-#     3000 y 16686 (NO Prometheus, que nunca está expuesto públicamente).
-#   - Corrido DENTRO de la VM f13demo (normalmente invocado por
-#     remote-install.sh o demo-reset.sh vía SSH): TARGET_HOST=localhost.
-#     En ese modo también valida Prometheus en localhost:9090, ya que ese
-#     puerto solo es alcanzable dentro de la propia VM.
-#
-# Mapeo de puertos: 8080 (shop-api), 3000 (Grafana) y 16686 (Jaeger) son
-# IDÉNTICOS en ambos modos, porque docker compose los publica en la interfaz
-# de red del host de la VM (no en un puerto interno distinto); lo único que
-# cambia es si accedemos por la IP pública o por localhost. Prometheus
-# (9090) solo se prueba en modo localhost porque el compose.yaml del
-# laboratorio no lo publica hacia afuera de la VM.
+# Smoke test del laboratorio F13. Corre en el Codespace (o donde viva el
+# stack) contra los puertos publicados por compose.yaml en localhost.
 #
 # Uso:
-#   TARGET_HOST=localhost bash scripts/smoke-test.sh
-#   bash scripts/smoke-test.sh                 # usa la IP pública del estado
+#   bash scripts/smoke-test.sh
+#   TARGET_HOST=<host> bash scripts/smoke-test.sh
 #   bash scripts/smoke-test.sh -h|--help
 
 set -Eeuo pipefail
@@ -29,18 +14,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 install_error_trap
 
-SHOP_API_PORT=8080
-GRAFANA_PORT=3000
-JAEGER_PORT=16686
-PROMETHEUS_PORT=9090
 CURL_TIMEOUT=10
+RETRY_ATTEMPTS=12
+RETRY_SECONDS=5
 
-# Métricas mínimas que el contrato del laboratorio exige encontrar en
-# Prometheus (ver INSTRUCCIONES_AGENTE_SONNET_LAB_F13.md, "Modelo de
-# métricas"). IMPORTANTE: se usan los nombres de serie EXACTOS tal como los
-# expone prometheus_client (con sufijo _total/_bucket incluido), porque la
-# API de consulta de Prometheus no resuelve el nombre "base" de un Counter/
-# Histogram: hay que preguntar por el nombre de serie real.
+# Métricas mínimas que deben existir en Prometheus. Se usan los nombres de
+# serie EXACTOS tal como los expone prometheus_client (con sufijo
+# _total/_bucket), porque la API de consulta no resuelve el nombre "base" de
+# un Counter/Histogram.
 REQUIRED_METRICS=(
     f13_checkout_requests_total
     f13_checkout_duration_seconds_bucket
@@ -51,24 +32,27 @@ REQUIRED_METRICS=(
     f13_slo_target_ratio
     f13_fault_active
 )
+REQUIRED_DASHBOARDS=(f13-tecnico f13-impacto-negocio)
+REQUIRED_TRACE_SERVICES=(shop-api payment-service)
 
 usage() {
     cat <<'EOF'
-Uso: TARGET_HOST=<host> bash scripts/smoke-test.sh [-h|--help]
+Uso: bash scripts/smoke-test.sh [-h|--help]
 
 Prueba, en orden, que el laboratorio F13 responde correctamente:
-  1. GET  /health          en shop-api (puerto 8080)
-  2. POST /checkout        en shop-api, espera HTTP 200 y JSON con "outcome"
-  3. (solo si TARGET_HOST=localhost) Prometheus (9090) tiene las métricas f13_*
-  4. GET  /api/health       en Grafana (puerto 3000)
-  5. GET  /                en Jaeger UI (puerto 16686), espera HTTP 200
+  1. GET  /health de shop-api (puerto 8080)
+  2. POST /checkout de shop-api: HTTP 200 y JSON con "outcome"
+  3. Prometheus (9090) tiene todas las métricas f13_* requeridas
+  4. GET  /api/health de Grafana (puerto 3000)
+  5. Grafana tiene provisionados los dashboards f13-tecnico y f13-impacto-negocio
+  6. Jaeger UI (puerto 16686) responde HTTP 200
+  7. Jaeger ya recibió trazas de shop-api y payment-service
 
-Falla (exit != 0) con mensaje claro ante cualquier verificación no exitosa.
+Los pasos 3, 5 y 7 reintentan hasta ~60s (el scrape, el polling de
+value-exporter y el batch del Collector tardan unos segundos tras arrancar).
 
 Variables de entorno:
-  TARGET_HOST   host contra el que se prueba. Si no se define, se usa la IP
-                pública guardada en .f13demo-state.env (modo LOCAL). Pasa
-                TARGET_HOST=localhost para correr dentro de la VM f13demo.
+  TARGET_HOST   host contra el que se prueba (default: localhost)
 EOF
 }
 
@@ -88,35 +72,24 @@ done
 
 require_cmd curl
 
-if [[ -z "${TARGET_HOST:-}" ]]; then
-    log_info "TARGET_HOST no definido; cargando IP pública desde ${STATE_FILE}..."
-    load_state_file
-    TARGET_HOST="${PUBLIC_IP}"
-fi
-
-log_info "Ejecutando smoke test contra TARGET_HOST=${TARGET_HOST}"
-
 fail() {
     log_error "$1"
     exit 1
 }
 
+log_info "Ejecutando smoke test contra TARGET_HOST=${TARGET_HOST}"
+
 # 1. GET /health de shop-api ----------------------------------------------------
-log_info "1/5: GET http://${TARGET_HOST}:${SHOP_API_PORT}/health"
+log_info "1/7: GET http://${TARGET_HOST}:${SHOP_API_PORT}/health"
 health_code="$(curl -s -o /dev/null -m "${CURL_TIMEOUT}" -w '%{http_code}' "http://${TARGET_HOST}:${SHOP_API_PORT}/health" || echo "000")"
 if [[ "${health_code}" != "200" ]]; then
     fail "shop-api /health respondió HTTP ${health_code} (se esperaba 200)."
 fi
 log_info "OK: shop-api /health -> 200"
 
-# 2. POST /checkout con body de ejemplo ------------------------------------------
-# NOTA / SUPUESTO: el esquema exacto de /checkout depende de app/shop-api
-# (en construcción en paralelo). Usamos un body mínimo consistente con las
-# variables del modelo financiero (.env.example: AVERAGE_REQUEST_VALUE_USD).
-# Si el esquema real difiere, este paso fallará explícitamente (no se oculta
-# el error), señalando la necesidad de ajustar el body de ejemplo aquí.
+# 2. POST /checkout ----------------------------------------------------------------
 checkout_body='{"order_id":"smoke-test-order","amount_usd":50.0}'
-log_info "2/5: POST http://${TARGET_HOST}:${SHOP_API_PORT}/checkout"
+log_info "2/7: POST http://${TARGET_HOST}:${SHOP_API_PORT}/checkout"
 checkout_response="$(mktemp)"
 checkout_code="$(curl -s -m "${CURL_TIMEOUT}" -o "${checkout_response}" -w '%{http_code}' \
     -X POST -H 'Content-Type: application/json' -d "${checkout_body}" \
@@ -124,7 +97,7 @@ checkout_code="$(curl -s -m "${CURL_TIMEOUT}" -o "${checkout_response}" -w '%{ht
 if [[ "${checkout_code}" != "200" ]]; then
     log_error "Respuesta de /checkout: $(cat "${checkout_response}")"
     rm -f "${checkout_response}"
-    fail "shop-api /checkout respondió HTTP ${checkout_code} (se esperaba 200)."
+    fail "shop-api /checkout respondió HTTP ${checkout_code} (se esperaba 200). ¿Quedó una falla activa? Prueba: bash scripts/recover.sh"
 fi
 if ! grep -q '"outcome"' "${checkout_response}"; then
     log_error "Respuesta de /checkout: $(cat "${checkout_response}")"
@@ -134,60 +107,102 @@ fi
 rm -f "${checkout_response}"
 log_info "OK: shop-api /checkout -> 200 con campo \"outcome\""
 
-# 3. Prometheus (solo en modo localhost, dentro de la VM) ------------------------
-if [[ "${TARGET_HOST}" == "localhost" || "${TARGET_HOST}" == "127.0.0.1" ]]; then
-    log_info "3/5: verificando métricas f13_* en Prometheus (http://localhost:${PROMETHEUS_PORT})"
-    # Reintenta con espera: aunque el checkout de arriba ya ocurrió y los
-    # contenedores ya pasaron su healthcheck, la propagación completa tarda
-    # unos segundos (scrape_interval de Prometheus -> ciclo de poll de
-    # value-exporter -> siguiente scrape de sus métricas derivadas). Fallar
-    # en el primer intento sin reintentar reporta un falso negativo justo
-    # después de un despliegue/arranque en frío.
-    METRICS_MAX_ATTEMPTS=12
-    METRICS_RETRY_SECONDS=5
+# 3. Métricas f13_* en Prometheus ----------------------------------------------------
+log_info "3/7: verificando métricas f13_* en Prometheus (http://${TARGET_HOST}:${PROMETHEUS_PORT})"
+missing_metrics=()
+for attempt in $(seq 1 "${RETRY_ATTEMPTS}"); do
     missing_metrics=()
-    for attempt in $(seq 1 "${METRICS_MAX_ATTEMPTS}"); do
-        missing_metrics=()
-        for metric in "${REQUIRED_METRICS[@]}"; do
-            # `|| true` deliberado: si curl falla (p. ej. timeout), dejamos
-            # query_result vacío a propósito; el chequeo de abajo lo trata igual
-            # que "métrica ausente" y lo reporta en missing_metrics (no se oculta).
-            query_result="$(curl -s -m "${CURL_TIMEOUT}" -G --data-urlencode "query=${metric}" \
-                "http://localhost:${PROMETHEUS_PORT}/api/v1/query" || true)"
-            if [[ -z "${query_result}" ]] || ! grep -q '"result":\[.\+\]' <<<"${query_result}"; then
-                missing_metrics+=("${metric}")
-            fi
-        done
-        if [[ "${#missing_metrics[@]}" -eq 0 ]]; then
-            break
+    for metric in "${REQUIRED_METRICS[@]}"; do
+        # `|| true` deliberado: un curl fallido deja query_result vacío y el
+        # chequeo de abajo lo reporta como métrica ausente (no se oculta).
+        query_result="$(curl -s -m "${CURL_TIMEOUT}" -G --data-urlencode "query=${metric}" \
+            "http://${TARGET_HOST}:${PROMETHEUS_PORT}/api/v1/query" || true)"
+        if [[ -z "${query_result}" ]] || ! grep -q '"result":\[.\+\]' <<<"${query_result}"; then
+            missing_metrics+=("${metric}")
         fi
-        log_info "  intento ${attempt}/${METRICS_MAX_ATTEMPTS}: faltan ${missing_metrics[*]}; esperando ${METRICS_RETRY_SECONDS}s..."
-        sleep "${METRICS_RETRY_SECONDS}"
     done
-    if [[ "${#missing_metrics[@]}" -gt 0 ]]; then
-        fail "Prometheus no tiene (o aún no scrapeó) estas métricas requeridas: ${missing_metrics[*]}"
+    if [[ "${#missing_metrics[@]}" -eq 0 ]]; then
+        break
     fi
-    log_info "OK: todas las métricas f13_* requeridas están presentes en Prometheus."
-else
-    log_info "3/5: omitido (Prometheus no está expuesto públicamente; solo se valida con TARGET_HOST=localhost)."
+    log_info "  intento ${attempt}/${RETRY_ATTEMPTS}: faltan ${missing_metrics[*]}; esperando ${RETRY_SECONDS}s..."
+    sleep "${RETRY_SECONDS}"
+done
+if [[ "${#missing_metrics[@]}" -gt 0 ]]; then
+    fail "Prometheus no tiene (o aún no scrapeó) estas métricas requeridas: ${missing_metrics[*]}"
 fi
+log_info "OK: todas las métricas f13_* requeridas están presentes en Prometheus."
 
-# 4. Grafana ----------------------------------------------------------------------
-log_info "4/5: GET http://${TARGET_HOST}:${GRAFANA_PORT}/api/health"
-# `|| true` deliberado: un curl fallido deja grafana_response vacío, lo que
-# el chequeo siguiente ya trata como fallo explícito (no se enmascara nada).
+# 4. Grafana /api/health -------------------------------------------------------------
+log_info "4/7: GET http://${TARGET_HOST}:${GRAFANA_PORT}/api/health"
 grafana_response="$(curl -s -m "${CURL_TIMEOUT}" "http://${TARGET_HOST}:${GRAFANA_PORT}/api/health" || true)"
 if [[ -z "${grafana_response}" ]] || ! grep -q '"database"' <<<"${grafana_response}"; then
     fail "Grafana /api/health no respondió el JSON esperado. Respuesta: ${grafana_response}"
 fi
 log_info "OK: Grafana /api/health respondió correctamente."
 
-# 5. Jaeger UI ----------------------------------------------------------------------
-log_info "5/5: GET http://${TARGET_HOST}:${JAEGER_PORT}/"
+# 5. Dashboards provisionados ---------------------------------------------------------
+log_info "5/7: verificando dashboards provisionados en Grafana"
+# Se autentica con el admin de .env pasando las credenciales a curl por stdin
+# (`-K -`), nunca como argumento visible en `ps`.
+grafana_search() {
+    local user password
+    user="$(env_value GF_SECURITY_ADMIN_USER)"
+    password="$(env_value GF_SECURITY_ADMIN_PASSWORD)"
+    if [[ -n "${user}" && -n "${password}" ]]; then
+        printf 'user = "%s:%s"\n' "${user}" "${password}" |
+            curl -s -m "${CURL_TIMEOUT}" -K - "http://${TARGET_HOST}:${GRAFANA_PORT}/api/search?type=dash-db&query=F13" || true
+    else
+        curl -s -m "${CURL_TIMEOUT}" "http://${TARGET_HOST}:${GRAFANA_PORT}/api/search?type=dash-db&query=F13" || true
+    fi
+}
+missing_dashboards=()
+for attempt in $(seq 1 "${RETRY_ATTEMPTS}"); do
+    search_result="$(grafana_search)"
+    missing_dashboards=()
+    for uid in "${REQUIRED_DASHBOARDS[@]}"; do
+        if ! grep -q "\"uid\":\"${uid}\"" <<<"${search_result}"; then
+            missing_dashboards+=("${uid}")
+        fi
+    done
+    if [[ "${#missing_dashboards[@]}" -eq 0 ]]; then
+        break
+    fi
+    log_info "  intento ${attempt}/${RETRY_ATTEMPTS}: faltan dashboards ${missing_dashboards[*]}; esperando ${RETRY_SECONDS}s..."
+    sleep "${RETRY_SECONDS}"
+done
+if [[ "${#missing_dashboards[@]}" -gt 0 ]]; then
+    fail "Grafana no tiene provisionados estos dashboards: ${missing_dashboards[*]}"
+fi
+log_info "OK: dashboards ${REQUIRED_DASHBOARDS[*]} provisionados."
+
+# 6. Jaeger UI -----------------------------------------------------------------------
+log_info "6/7: GET http://${TARGET_HOST}:${JAEGER_PORT}/"
 jaeger_code="$(curl -s -o /dev/null -m "${CURL_TIMEOUT}" -w '%{http_code}' "http://${TARGET_HOST}:${JAEGER_PORT}/" || echo "000")"
 if [[ "${jaeger_code}" != "200" ]]; then
     fail "Jaeger UI respondió HTTP ${jaeger_code} (se esperaba 200)."
 fi
 log_info "OK: Jaeger UI -> 200"
+
+# 7. Trazas en Jaeger -----------------------------------------------------------------
+log_info "7/7: verificando que Jaeger recibió trazas de ${REQUIRED_TRACE_SERVICES[*]}"
+missing_services=()
+for attempt in $(seq 1 "${RETRY_ATTEMPTS}"); do
+    services_result="$(curl -s -m "${CURL_TIMEOUT}" "http://${TARGET_HOST}:${JAEGER_PORT}/api/services" || true)"
+    missing_services=()
+    for service in "${REQUIRED_TRACE_SERVICES[@]}"; do
+        if ! grep -q "\"${service}\"" <<<"${services_result}"; then
+            missing_services+=("${service}")
+        fi
+    done
+    if [[ "${#missing_services[@]}" -eq 0 ]]; then
+        break
+    fi
+    log_info "  intento ${attempt}/${RETRY_ATTEMPTS}: Jaeger aún no tiene trazas de ${missing_services[*]}; esperando ${RETRY_SECONDS}s..."
+    sleep "${RETRY_SECONDS}"
+done
+if [[ "${#missing_services[@]}" -gt 0 ]]; then
+    fail "Jaeger no tiene trazas de: ${missing_services[*]} (revisa: docker compose logs otel-collector)"
+fi
+log_info "OK: Jaeger tiene trazas de ${REQUIRED_TRACE_SERVICES[*]}."
 
 log_info "Smoke test completo: todas las verificaciones pasaron."

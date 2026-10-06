@@ -78,7 +78,7 @@ Como referencia del patrón de alerta por burn-rate (multi-ventana, multi-burn-r
 Google SRE, `observability/prometheus/rules.yml` incluye una regla de alerta **ilustrativa**
 (`F13ErrorBudgetBurnRateHigh`, grupo `f13-burn-rate-illustrative`) que se dispara cuando
 `f13_slo_error_budget_remaining_ratio < 0.10`. Esta regla es visible en la UI de Prometheus
-(`http://localhost:9090/alerts`, no publicada al host) solo para ilustrar el patrón: **este
+(puerto `9090` del Codespace → *Alerts*) solo para ilustrar el patrón: **este
 laboratorio no despliega Alertmanager**, por lo que la regla nunca envía una notificación real.
 
 ## Ventana acelerada de demostración vs. ventana de producción

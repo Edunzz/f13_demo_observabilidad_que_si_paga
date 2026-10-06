@@ -1,73 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="drawio" version="31.1.8">
-  <diagram name="Arquitectura F13">
-    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1950" pageHeight="900" math="0" shadow="0">
+  <diagram name="Arquitectura F13 (Codespaces)">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2100" pageHeight="860" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
         <!-- Titulo -->
-        <mxCell id="title" value="F13 · Observabilidad que si paga — Arquitectura del laboratorio" style="text;html=1;fontStyle=1;fontSize=20;align=left;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="40" y="0" width="900" height="30" as="geometry" />
+        <mxCell id="title" value="F13 · Observabilidad que sí paga — Arquitectura del laboratorio en GitHub Codespaces" style="text;html=1;fontStyle=1;fontSize=20;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="5" width="1100" height="30" as="geometry" />
         </mxCell>
 
-        <!-- ================= ZONA 1: Cliente / Operador ================= -->
-        <mxCell id="zone1" value="Cliente / Operador" style="swimlane;startSize=30;html=1;container=1;collapsible=0;fillColor=none;strokeColor=#666666;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
-          <mxGeometry x="40" y="40" width="260" height="340" as="geometry" />
+        <!-- ================= ZONA 1: Persona que explora ================= -->
+        <mxCell id="zone1" value="Tú (o el público de la demo)" style="swimlane;startSize=30;html=1;container=1;collapsible=0;fillColor=none;strokeColor=#666666;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="280" height="590" as="geometry" />
         </mxCell>
-        <mxCell id="browser" value="Navegador web&#xa;(Grafana / Jaeger)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone1">
-          <mxGeometry x="20" y="50" width="220" height="60" as="geometry" />
+        <mxCell id="browser" value="Navegador&#xa;Grafana · Jaeger · Prometheus&#xa;Swagger de shop-api" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone1">
+          <mxGeometry x="20" y="55" width="240" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="cli" value="Terminal + Azure CLI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone1">
-          <mxGeometry x="20" y="140" width="220" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="scripts" value="Scripts de demo (bash)&#xa;deploy / inject-fault / recover" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone1">
-          <mxGeometry x="20" y="230" width="220" height="80" as="geometry" />
+        <mxCell id="vscode" value="VS Code en el navegador&#xa;(terminal del Codespace)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone1">
+          <mxGeometry x="20" y="400" width="240" height="90" as="geometry" />
         </mxCell>
 
-        <!-- ================= ZONA 2: Azure / RG / VM ================= -->
-        <mxCell id="zone2" value="Azure · Resource Group ace_JoseRomero · VM f13demo (Ubuntu 24.04 LTS)" style="swimlane;startSize=30;html=1;container=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
-          <mxGeometry x="360" y="40" width="1500" height="620" as="geometry" />
+        <!-- ================= ZONA 2: GitHub Codespace ================= -->
+        <mxCell id="zone2" value="GitHub Codespace · devcontainer python:3.12 + Docker-in-Docker" style="swimlane;startSize=30;html=1;container=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="360" y="50" width="1690" height="590" as="geometry" />
         </mxCell>
-        <mxCell id="nsg" value="NSG f13demo-nsg&#xa;(reglas por ADMIN_CIDR)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="zone2">
-          <mxGeometry x="40" y="40" width="220" height="60" as="geometry" />
+        <mxCell id="forwarding" value="&lt;b&gt;Port forwarding de GitHub&lt;/b&gt;&lt;br&gt;&amp;lt;codespace&amp;gt;-&amp;lt;puerto&amp;gt;.app.github.dev&lt;br&gt;Públicos: 3000 · 16686 · 9090 · 8080" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="zone2">
+          <mxGeometry x="30" y="50" width="300" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="pip" value="IP pública f13demo-pip&#xa;(Standard, estática)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="zone2">
-          <mxGeometry x="300" y="40" width="220" height="60" as="geometry" />
+        <mxCell id="lifecycle" value="&lt;b&gt;devcontainer.json&lt;/b&gt;&lt;br&gt;postCreate → setup-env.sh (.env + secretos)&lt;br&gt;postStart → lab-up.sh" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="zone2">
+          <mxGeometry x="30" y="170" width="300" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="compose" value="Orquestador: Docker Compose&#xa;(compose.yaml)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="zone2">
-          <mxGeometry x="560" y="40" width="260" height="60" as="geometry" />
+        <mxCell id="compose" value="&lt;b&gt;Docker Compose&lt;/b&gt;&lt;br&gt;compose.yaml" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="zone2">
+          <mxGeometry x="30" y="280" width="300" height="60" as="geometry" />
         </mxCell>
-
-        <!-- ================= ZONA 3 (anidada): Servicios dentro de f13demo-net ================= -->
-        <mxCell id="zone3" value="Red interna Docker: f13demo-net (sin exposicion publica salvo lo indicado)" style="swimlane;startSize=30;html=1;container=1;collapsible=0;fillColor=#ffffff;strokeColor=#6c8ebf;dashed=1;fontStyle=1;verticalAlign=top;" vertex="1" parent="zone2">
-          <mxGeometry x="40" y="140" width="1420" height="420" as="geometry" />
+        <mxCell id="scripts" value="&lt;b&gt;Scripts (bash)&lt;/b&gt;&lt;br&gt;inject-fault · recover · demo-reset&lt;br&gt;business-snapshot · status" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone2">
+          <mxGeometry x="30" y="400" width="300" height="90" as="geometry" />
         </mxCell>
 
-        <mxCell id="loadgen" value="load-generator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone3">
-          <mxGeometry x="40" y="60" width="200" height="70" as="geometry" />
-        </mxCell>
-        <mxCell id="shopapi" value="shop-api&#xa;:8000 (host 8080)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone3">
-          <mxGeometry x="320" y="60" width="200" height="70" as="geometry" />
-        </mxCell>
-        <mxCell id="payment" value="payment-service&#xa;:8001 (interno)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone3">
-          <mxGeometry x="600" y="60" width="200" height="70" as="geometry" />
-        </mxCell>
-        <mxCell id="otel" value="otel-collector&#xa;:4317/:4318 (interno)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="zone3">
-          <mxGeometry x="880" y="60" width="200" height="70" as="geometry" />
-        </mxCell>
-        <mxCell id="jaeger" value="jaeger&#xa;:16686 (host 16686)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="zone3">
-          <mxGeometry x="1160" y="60" width="200" height="70" as="geometry" />
+        <!-- ================= ZONA 3 (anidada): red Docker ================= -->
+        <mxCell id="zone3" value="Red Docker f13demo-net · todos los servicios en HTTP plano (sin TLS)" style="swimlane;startSize=30;html=1;container=1;collapsible=0;fillColor=#ffffff;strokeColor=#6c8ebf;dashed=1;fontStyle=1;verticalAlign=top;" vertex="1" parent="zone2">
+          <mxGeometry x="360" y="40" width="1300" height="510" as="geometry" />
         </mxCell>
 
-        <mxCell id="valueexp" value="value-exporter&#xa;:9200 (interno)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="zone3">
-          <mxGeometry x="320" y="280" width="200" height="70" as="geometry" />
+        <mxCell id="loadgen" value="load-generator&#xa;~120 checkouts/min" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone3">
+          <mxGeometry x="30" y="100" width="200" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="prometheus" value="prometheus&#xa;:9090 (interno)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="zone3">
-          <mxGeometry x="600" y="280" width="200" height="70" as="geometry" />
+        <mxCell id="shopapi" value="shop-api&#xa;:8080 · público" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone3">
+          <mxGeometry x="290" y="100" width="200" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="grafana" value="grafana&#xa;:3000 (host 3000)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="zone3">
-          <mxGeometry x="880" y="280" width="200" height="70" as="geometry" />
+        <mxCell id="payment" value="payment-service&#xa;127.0.0.1:8001 · solo terminal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="zone3">
+          <mxGeometry x="550" y="100" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="otel" value="otel-collector&#xa;:4317 / :4318 (interno)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="zone3">
+          <mxGeometry x="810" y="100" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jaeger" value="jaeger&#xa;:16686 · público" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="zone3">
+          <mxGeometry x="1070" y="100" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="valueexp" value="value-exporter (capa de valor)&#xa;127.0.0.1:9200 · solo terminal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="zone3">
+          <mxGeometry x="290" y="360" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="prometheus" value="prometheus&#xa;:9090 · público" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="zone3">
+          <mxGeometry x="550" y="360" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="grafana" value="grafana&#xa;:3000 · público" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="zone3">
+          <mxGeometry x="810" y="360" width="200" height="70" as="geometry" />
         </mxCell>
 
         <!-- ================= EDGES: trafico de aplicacion (azul solido) ================= -->
@@ -79,67 +79,82 @@
         </mxCell>
 
         <!-- ================= EDGES: telemetria (naranja punteado largo) ================= -->
-        <mxCell id="e-otlp1" value="OTLP 4317/4318 (interno)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;exitX=0.3;exitY=0;entryX=0.3;entryY=1;" edge="1" parent="1" source="shopapi" target="otel">
+        <mxCell id="e-otlp1" value="OTLP (interno)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;exitX=0.3;exitY=0;entryX=0.3;entryY=0;" edge="1" parent="1" source="shopapi" target="otel">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1070" y="150" />
+              <mxPoint x="1590" y="150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-otlp2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;exitX=0.7;exitY=0;entryX=0.15;entryY=0;" edge="1" parent="1" source="payment" target="otel">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1410" y="168" />
+              <mxPoint x="1560" y="168" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-otlpexport" value="trazas" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="otel" target="jaeger">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-otlp2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.25;entryY=1;" edge="1" parent="1" source="payment" target="otel">
+        <mxCell id="e-scrape1" value="scrape /metrics" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;exitX=0.15;exitY=0;entryX=0.65;entryY=1;" edge="1" parent="1" source="prometheus" target="shopapi">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-otlpexport" value="OTLP export" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="otel" target="jaeger">
+        <mxCell id="e-scrape2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="prometheus" target="payment">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-scrape1" value="scrape Prometheus (interno)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;exitX=0.15;exitY=0;entryX=0.65;entryY=1;" edge="1" parent="1" source="prometheus" target="shopapi">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e-scrape2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;exitX=0.4;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="prometheus" target="payment">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e-scrape3" value="scrape Prometheus (interno)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0.5;entryY=1;" edge="1" parent="1" source="prometheus" target="valueexp">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e-scrape3" value="scrape /metrics" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=1;" edge="1" parent="1" source="prometheus" target="valueexp">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1370" y="560" />
+              <mxPoint x="1110" y="560" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="e-scrape4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;endArrow=block;fontColor=#8a5a00;labelBackgroundColor=#ffffff;exitX=0.85;exitY=0;entryX=0.35;entryY=1;" edge="1" parent="1" source="prometheus" target="otel">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- ================= EDGES: consulta / UI (verde punteado corto) ================= -->
-        <mxCell id="e-promql1" value="consulta PromQL" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;dashed=1;dashPattern=1 3;endArrow=block;fontColor=#4a7a2f;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="valueexp" target="prometheus">
+        <mxCell id="e-promql1" value="PromQL cada 5 s" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;dashed=1;dashPattern=1 3;endArrow=block;fontColor=#4a7a2f;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="valueexp" target="prometheus">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-promql2" value="consulta PromQL" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;dashed=1;dashPattern=1 3;endArrow=block;fontColor=#4a7a2f;labelBackgroundColor=#ffffff;exitX=0.75;exitY=1;entryX=0.75;entryY=0;" edge="1" parent="1" source="grafana" target="prometheus">
+        <mxCell id="e-promql2" value="PromQL" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;dashed=1;dashPattern=1 3;endArrow=block;fontColor=#4a7a2f;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="grafana" target="prometheus">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-http" value="HTTPS/HTTP usuario&#xa;(8080 / 3000 / 16686)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;dashed=1;dashPattern=1 3;endArrow=block;fontColor=#4a7a2f;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="browser" target="nsg">
+        <mxCell id="e-browser" value="URL de GitHub" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;dashed=1;dashPattern=1 3;endArrow=block;fontColor=#4a7a2f;labelBackgroundColor=#ffffff;fontSize=11;" edge="1" parent="1" source="browser" target="forwarding">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="-14" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-forward" value="HTTP plano" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;dashed=1;dashPattern=1 3;endArrow=block;fontColor=#4a7a2f;labelBackgroundColor=#ffffff;fontSize=11;exitX=1;exitY=0.5;entryX=0;entryY=0.108;" edge="1" parent="1" source="forwarding" target="zone3">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="-14" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-terminal" value="terminal" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=block;fontColor=#333333;labelBackgroundColor=#ffffff;fontSize=11;" edge="1" parent="1" source="vscode" target="scripts">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-nsg-shopapi" value="UI 8080 restringida por NSG" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;dashed=1;dashPattern=1 3;endArrow=block;fontColor=#4a7a2f;labelBackgroundColor=#ffffff;exitX=0.3;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="nsg" target="shopapi">
+        <mxCell id="e-lifecycle" value="lab-up.sh: up -d --build" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;endArrow=block;fontColor=#333333;labelBackgroundColor=#f5f5f5;fontSize=11;" edge="1" parent="1" source="lifecycle" target="compose">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-fault" value="POST /admin/fault + token" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b85450;strokeWidth=2;endArrow=block;fontColor=#b85450;labelBackgroundColor=#ffffff;fontSize=11;exitX=1;exitY=0.15;entryX=0.1;entryY=1;" edge="1" parent="1" source="scripts" target="payment">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="466" y="150" />
-              <mxPoint x="820" y="150" />
+              <mxPoint x="705" y="464" />
+              <mxPoint x="705" y="330" />
+              <mxPoint x="1290" y="330" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="e-nsg-jaeger" value="UI 16686 restringida por NSG" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;dashed=1;dashPattern=1 3;endArrow=block;fontColor=#4a7a2f;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="nsg" target="jaeger">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="510" y="160" />
-              <mxPoint x="1660" y="160" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="e-nsg-grafana" value="UI 3000 restringida por NSG" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;dashed=1;dashPattern=1 3;endArrow=block;fontColor=#4a7a2f;labelBackgroundColor=#ffffff;exitX=0.7;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="nsg" target="grafana">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="554" y="170" />
-              <mxPoint x="1240" y="170" />
-              <mxPoint x="1240" y="495" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="e-reset" value="POST /admin/reset-accumulator" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b85450;strokeWidth=2;endArrow=block;fontColor=#b85450;labelBackgroundColor=#ffffff;fontSize=11;exitX=1;exitY=0.389;entryX=0;entryY=0.5;" edge="1" parent="1" source="scripts" target="valueexp">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- ================= LEYENDA ================= -->
         <mxCell id="legend" value="Leyenda" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;verticalAlign=top;fontStyle=1;align=left;spacingLeft=8;" vertex="1" parent="1">
-          <mxGeometry x="40" y="720" width="420" height="120" as="geometry" />
+          <mxGeometry x="40" y="670" width="470" height="150" as="geometry" />
         </mxCell>
         <mxCell id="leg1line" value="" style="html=1;endArrow=block;strokeColor=#6c8ebf;strokeWidth=2;" edge="1" parent="legend">
           <mxGeometry relative="1" as="geometry">
@@ -147,8 +162,8 @@
             <mxPoint x="65" y="40" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="leg1t" value="Trafico de aplicacion (checkout / payment)" style="text;html=1;align=left;verticalAlign=middle;" vertex="1" parent="legend">
-          <mxGeometry x="75" y="28" width="330" height="24" as="geometry" />
+        <mxCell id="leg1t" value="Tráfico de aplicación (checkout / payment) y terminal" style="text;html=1;align=left;verticalAlign=middle;" vertex="1" parent="legend">
+          <mxGeometry x="75" y="28" width="380" height="24" as="geometry" />
         </mxCell>
         <mxCell id="leg2line" value="" style="html=1;endArrow=block;strokeColor=#d79b00;strokeWidth=2;dashed=1;dashPattern=8 4;" edge="1" parent="legend">
           <mxGeometry relative="1" as="geometry">
@@ -156,8 +171,8 @@
             <mxPoint x="65" y="68" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="leg2t" value="Trafico de telemetria (OTLP / scrape Prometheus)" style="text;html=1;align=left;verticalAlign=middle;" vertex="1" parent="legend">
-          <mxGeometry x="75" y="56" width="340" height="24" as="geometry" />
+        <mxCell id="leg2t" value="Telemetría (OTLP / scrape de Prometheus)" style="text;html=1;align=left;verticalAlign=middle;" vertex="1" parent="legend">
+          <mxGeometry x="75" y="56" width="380" height="24" as="geometry" />
         </mxCell>
         <mxCell id="leg3line" value="" style="html=1;endArrow=block;strokeColor=#82b366;strokeWidth=2;dashed=1;dashPattern=1 3;" edge="1" parent="legend">
           <mxGeometry relative="1" as="geometry">
@@ -165,13 +180,22 @@
             <mxPoint x="65" y="96" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="leg3t" value="Trafico de consulta / UI (PromQL, Grafana, Jaeger)" style="text;html=1;align=left;verticalAlign=middle;" vertex="1" parent="legend">
-          <mxGeometry x="75" y="84" width="340" height="24" as="geometry" />
+        <mxCell id="leg3t" value="Consulta / UI (PromQL, navegador vía port forwarding)" style="text;html=1;align=left;verticalAlign=middle;" vertex="1" parent="legend">
+          <mxGeometry x="75" y="84" width="380" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4line" value="" style="html=1;endArrow=block;strokeColor=#b85450;strokeWidth=2;" edge="1" parent="legend">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="15" y="124" as="sourcePoint" />
+            <mxPoint x="65" y="124" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="leg4t" value="API admin, solo desde la terminal (nunca publicada)" style="text;html=1;align=left;verticalAlign=middle;" vertex="1" parent="legend">
+          <mxGeometry x="75" y="112" width="380" height="24" as="geometry" />
         </mxCell>
 
         <!-- Nota valores ilustrativos -->
-        <mxCell id="note" value="Nombres, IP y credenciales mostrados son genericos/ilustrativos. No representan datos reales de ninguna organizacion." style="text;html=1;align=left;verticalAlign=middle;fontStyle=2;fontColor=#666666;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="500" y="740" width="700" height="40" as="geometry" />
+        <mxCell id="note" value="«público» = puerto con visibilidad Public en el port forwarding del Codespace (scripts/publish-ports.sh).&lt;br&gt;Montos, tasas y credenciales del laboratorio son ilustrativos. No representan datos reales de ninguna organización." style="text;html=1;align=left;verticalAlign=middle;fontStyle=2;fontColor=#666666;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="550" y="690" width="900" height="50" as="geometry" />
         </mxCell>
 
       </root>

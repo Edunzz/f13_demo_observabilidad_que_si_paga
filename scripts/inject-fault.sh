@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# [LOCAL] Activa la falla determinista de payment-service (latencia + tasa de
-# error configurables) para la demo del laboratorio F13, orquestando por SSH.
+# Activa la falla determinista de payment-service (latencia + tasa de error
+# configurables) para la demo del laboratorio F13.
 #
 # Uso:
 #   bash scripts/inject-fault.sh [FAULT_LATENCY_MS] [FAULT_ERROR_RATE] [-y|--yes]
@@ -19,7 +19,6 @@ source "${SCRIPT_DIR}/lib/common.sh"
 install_error_trap
 
 TARGET_SERVICE="payment-service"
-ADMIN_PORT=8001
 DEFAULT_LATENCY_MS=1800
 DEFAULT_ERROR_RATE=0.30
 ASSUME_YES="false"
@@ -28,16 +27,16 @@ usage() {
     cat <<'EOF'
 Uso: bash scripts/inject-fault.sh [FAULT_LATENCY_MS] [FAULT_ERROR_RATE] [-y|--yes]
 
-[LOCAL] Activa una falla reproducible en payment-service dentro de la VM
-remota, vía su API administrativa local (POST /admin/fault en localhost:8001,
-solo accesible desde dentro de la VM, nunca expuesta a Internet).
+Activa una falla reproducible en payment-service vía su API administrativa
+(POST /admin/fault en localhost:8001, publicada solo en 127.0.0.1 del
+Codespace). El token admin se lee de .env y nunca se imprime.
 
 Argumentos posicionales (opcionales):
   FAULT_LATENCY_MS   latencia adicional en ms a inyectar (default: 1800)
   FAULT_ERROR_RATE   tasa de error 0.0-1.0 a inyectar (default: 0.30)
 
 Opciones:
-  -y, --yes    omite la confirmación interactiva (útil en runbooks/CI)
+  -y, --yes    omite la confirmación interactiva
   -h, --help   muestra esta ayuda
 
 El script imprime el estado ANTERIOR y NUEVO de la falla, y verifica que la
@@ -79,14 +78,12 @@ if ! [[ "${FAULT_ERROR_RATE}" =~ ^0(\.[0-9]+)?$|^1(\.0+)?$ ]]; then
     exit 1
 fi
 
-require_cmd ssh curl
-
-log_info "Cargando estado local..."
-load_state_file
+require_cmd curl
+require_env_file
 
 # --- confirmación --------------------------------------------------------------
 echo
-echo "Se activará una falla en '${TARGET_SERVICE}' (VM ${VM_NAME}):"
+echo "Se activará una falla en '${TARGET_SERVICE}':"
 echo "  latencia adicional : ${FAULT_LATENCY_MS} ms"
 echo "  tasa de error       : ${FAULT_ERROR_RATE}"
 echo
@@ -102,54 +99,14 @@ if [[ "${ASSUME_YES}" != "true" ]]; then
     fi
 fi
 
-# --- obtener token admin (solo en memoria de este proceso) ----------------------
-log_info "Leyendo FAULT_ADMIN_TOKEN desde .env remoto (no se imprime)..."
-FAULT_ADMIN_TOKEN="$(ssh_exec "grep '^FAULT_ADMIN_TOKEN=' '${REMOTE_REPO_DIR}/.env' | cut -d'=' -f2-")"
-if [[ -z "${FAULT_ADMIN_TOKEN}" ]]; then
-    log_error "No se pudo leer FAULT_ADMIN_TOKEN desde ${REMOTE_REPO_DIR}/.env en la VM."
-    exit 1
-fi
-
-# admin_fault_request <METODO> [<json_body>]
-# Envía la petición a /admin/fault dentro de la VM SIN exponer el token como
-# argumento de línea de comandos remoto (visible en `ps aux` de otros
-# usuarios de la VM): usamos `curl -K -` (config de curl leída por stdin) y
-# canalizamos ese stdin a través del propio canal SSH cifrado. El token solo
-# vive en la variable local FAULT_ADMIN_TOKEN de este script.
-admin_fault_request() {
-    local method="$1"
-    local data="${2:-}"
-    local cfg
-    cfg="url = \"http://localhost:${ADMIN_PORT}/admin/fault\"
-request = \"${method}\"
-header = \"X-Fault-Admin-Token: ${FAULT_ADMIN_TOKEN}\"
-header = \"Content-Type: application/json\"
-silent
-show-error
-write-out = \"HTTP_STATUS:%{http_code}\""
-    if [[ -n "${data}" ]]; then
-        local escaped="${data//\"/\\\"}"
-        cfg="${cfg}
-data = \"${escaped}\""
-    fi
-    printf '%s\n' "${cfg}" | ssh_exec "curl -K -"
-}
-
-parse_body() {
-    sed 's/HTTP_STATUS:[0-9]*$//'
-}
-
-parse_status() {
-    grep -o 'HTTP_STATUS:[0-9]*$' | cut -d: -f2
-}
-
 # --- estado anterior -------------------------------------------------------------
 log_info "Consultando estado ANTERIOR de la falla (GET /admin/fault)..."
-before_raw="$(admin_fault_request GET)"
+before_raw="$(payment_admin_request GET)"
 before_status="$(parse_status <<<"${before_raw}")"
 before_body="$(parse_body <<<"${before_raw}")"
 if [[ "${before_status}" != "200" ]]; then
     log_error "GET /admin/fault respondió HTTP ${before_status}. Respuesta: ${before_body}"
+    log_error "¿Está arriba el stack? Revisa con: bash scripts/status.sh"
     exit 1
 fi
 echo "Estado ANTERIOR: ${before_body}"
@@ -157,7 +114,7 @@ echo "Estado ANTERIOR: ${before_body}"
 # --- activar falla -----------------------------------------------------------------
 log_info "Activando falla (POST /admin/fault)..."
 fault_body="{\"active\":true,\"latency_ms\":${FAULT_LATENCY_MS},\"error_rate\":${FAULT_ERROR_RATE}}"
-after_raw="$(admin_fault_request POST "${fault_body}")"
+after_raw="$(payment_admin_request POST "${fault_body}")"
 after_status="$(parse_status <<<"${after_raw}")"
 after_body="$(parse_body <<<"${after_raw}")"
 if [[ "${after_status}" != "200" ]]; then
@@ -168,17 +125,10 @@ echo "Estado NUEVO: ${after_body}"
 
 # --- verificar métrica f13_fault_active=1 ------------------------------------------
 log_info "Verificando f13_fault_active=1 en /metrics de payment-service..."
-check_metric_is_one() {
-    local metrics
-    metrics="$(ssh_exec "curl -s http://localhost:${ADMIN_PORT}/metrics")"
-    grep -qE '^f13_fault_active[[:space:]]+1(\.0+)?$' <<<"${metrics}"
-}
-if ! retry 6 5 check_metric_is_one; then
-    log_error "f13_fault_active no llegó a 1 tras varios intentos. Revisa payment-service."
+if ! retry 6 5 fault_metric_is 1; then
+    log_error "f13_fault_active no llegó a 1 tras varios intentos. Revisa: docker compose logs payment-service"
     exit 1
 fi
 
-log_info "Falla activa confirmada (f13_fault_active=1). Listo para la demo."
-
-# Limpiar el token de memoria del proceso lo antes posible.
-unset FAULT_ADMIN_TOKEN
+log_info "Falla activa confirmada (f13_fault_active=1)."
+log_info "Observa el impacto: bash scripts/business-snapshot.sh  (o los dashboards de Grafana)."
