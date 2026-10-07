@@ -1,7 +1,7 @@
 # 05. Modelo financiero (capa de valor)
 
 > **Aviso repetido a propósito, porque es el punto más importante de este documento:** todas las
-> cifras de este documento —y todas las que verá el público en los dashboards de la demo— son
+> cifras de este documento (y todas las que verá el público en los dashboards de la demo) son
 > **ILUSTRATIVAS**. Se calculan con los valores de ejemplo de `.env.example` para demostrar un
 > **método** de traducir señales técnicas a lenguaje de negocio. No representan ingresos, tickets ni
 > tasas de conversión de ninguna organización real, ni deben usarse como referencia de negocio fuera
@@ -92,7 +92,7 @@ perdida_estimada_total_usd = integral temporal de las pérdidas por minuto duran
 `value-exporter` la implementa como una **integral discreta (suma simple, no trapezoidal)**: en cada
 ciclo de polling (cada ~5 s), toma la suma de las dos fórmulas anteriores
 (`loss_per_minute_total = ingreso_en_riesgo_usd_min + perdida_degradacion_usd_min`) y la multiplica
-por los minutos transcurridos desde la última muestra, sumándola al acumulador — **solo mientras
+por los minutos transcurridos desde la última muestra, sumándola al acumulador - **solo mientras
 `f13_fault_active = 1`** (ver `accumulate_loss_usd()` en `formulas.py`). Esta aproximación asume que la
 pérdida por minuto se mantuvo aproximadamente constante durante cada intervalo corto de polling, lo
 cual es razonable para intervalos de ~5 s pero sería una simplificación mayor en ventanas más largas.
@@ -115,7 +115,7 @@ perdida_estimada_total_usd ≈ 2850 USD/min * 4 min = 11 400 USD (ilustrativo)
 En la demo real, `f13_business_estimated_loss_usd_total` se resetea explícitamente al inicio de cada
 corrida con `scripts/demo-reset.sh` (`POST /admin/reset-accumulator` en `value-exporter`, puerto 9200
 interno), por lo que el valor que el público ve depende exactamente de cuánto tiempo estuvo activa la
-falla durante esa demo puntual — no es un valor fijo.
+falla durante esa demo puntual - no es un valor fijo.
 
 ## Por qué en el Codespace ves cifras menores que en este ejemplo
 
@@ -160,7 +160,7 @@ permanecer visible durante toda la demo.
 
 ## Referencias
 
-- Google SRE Book — Service Level Objectives (contexto de por qué se conectan señales técnicas con
+- Google SRE Book - Service Level Objectives (contexto de por qué se conectan señales técnicas con
   objetivos medibles): https://sre.google/sre-book/service-level-objectives/
-- Prometheus — funciones `rate()` e `histogram_quantile()` usadas como insumo de estas fórmulas:
+- Prometheus - funciones `rate()` e `histogram_quantile()` usadas como insumo de estas fórmulas:
   https://prometheus.io/docs/prometheus/latest/querying/functions/

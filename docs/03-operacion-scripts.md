@@ -92,7 +92,7 @@ Nunca pegues el contenido de `.env` en un issue, chat o captura de pantalla.
 
 ## Referencias
 
-- Docker Compose — referencia CLI: https://docs.docker.com/compose/
-- Grafana — configuración por variables de entorno: https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/
-- Grafana — acceso anónimo: https://grafana.com/docs/grafana/latest/setup-grafana/configure-security/configure-authentication/grafana/#anonymous-authentication
-- curl — archivos de configuración (`-K`): https://everything.curl.dev/cmdline/configfile
+- Docker Compose - referencia CLI: https://docs.docker.com/compose/
+- Grafana - configuración por variables de entorno: https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/
+- Grafana - acceso anónimo: https://grafana.com/docs/grafana/latest/setup-grafana/configure-security/configure-authentication/grafana/#anonymous-authentication
+- curl - archivos de configuración (`-K`): https://everything.curl.dev/cmdline/configfile

@@ -7,7 +7,7 @@
         <mxCell id="1" parent="0" />
 
         <!-- Titulo -->
-        <mxCell id="title" value="F13 · Observabilidad que sí paga — Arquitectura del laboratorio en GitHub Codespaces" style="text;html=1;fontStyle=1;fontSize=20;align=left;verticalAlign=middle;" vertex="1" parent="1">
+        <mxCell id="title" value="F13 · Observabilidad que sí paga - Arquitectura del laboratorio en GitHub Codespaces" style="text;html=1;fontStyle=1;fontSize=20;align=left;verticalAlign=middle;" vertex="1" parent="1">
           <mxGeometry x="40" y="5" width="1100" height="30" as="geometry" />
         </mxCell>
 

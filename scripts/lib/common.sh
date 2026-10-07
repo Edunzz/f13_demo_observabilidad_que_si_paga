@@ -93,7 +93,7 @@ log_error() {
 # Instala un trap de ERR que reporta línea y comando fallido usando log_error.
 # IMPORTANTE: $BASH_COMMAND refleja el texto fuente del comando (sin expandir
 # variables), por lo que nunca imprime valores de secretos referenciados por
-# variable (p. ej. $token) — solo su nombre literal.
+# variable (p. ej. $token) - solo su nombre literal.
 install_error_trap() {
     trap 'log_error "Fallo en ${BASH_SOURCE[0]:-script}, línea ${LINENO}: \"${BASH_COMMAND}\" (código $?)"' ERR
 }

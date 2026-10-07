@@ -20,7 +20,7 @@ Antes de empezar, deja abierto en el navegador (ver checklist T-2 min):
 
 ## Guion minuto a minuto
 
-### 00:00–02:00 — Objetivo y arquitectura
+### 00:00-02:00 - Objetivo y arquitectura
 
 - Qué mostrar: diagrama `docs/images/architecture.png` (o el slide equivalente de la presentación).
 - Frase sugerida: "Vamos a ver un sistema de e-commerce de juguete, 100% open source, corriendo
@@ -31,7 +31,7 @@ Antes de empezar, deja abierto en el navegador (ver checklist T-2 min):
 - Plan B: si la pantalla compartida falla, describe verbalmente las 3 zonas del diagrama (tu
   navegador, el Codespace con Docker-in-Docker, los servicios) mientras se resuelve.
 
-### 02:00–05:00 — Tráfico saludable y trazas
+### 02:00-05:00 - Tráfico saludable y trazas
 
 - Qué mostrar: pestaña C (Jaeger UI). Busca el servicio `shop-api`, últimas trazas.
 - Comando (opcional, para confirmar que todo está arriba):
@@ -49,7 +49,7 @@ Antes de empezar, deja abierto en el navegador (ver checklist T-2 min):
   `docker compose logs -f --tail=20 load-generator` (ver también `docs/08-troubleshooting.md`,
   "Jaeger sin trazas").
 
-### 05:00–08:00 — Dashboard técnico, SLIs/SLO
+### 05:00-08:00 - Dashboard técnico, SLIs/SLO
 
 - Qué mostrar: pestaña A, dashboard **"F13 | Salud tecnica"**, filas "Checkout", "Pagos" y "SLIs, SLO
   y error budget".
@@ -57,13 +57,13 @@ Antes de empezar, deja abierto en el navegador (ver checklist T-2 min):
   checkout (ventana 5m)", "Latencia de checkout p50 / p95 / p99", "SLI tecnico (checkouts < 1s /
   total, 5m)", "SLI de negocio (checkouts exitosos / total, 5m)", "Error budget restante", "SLO
   objetivo / burn rate instantaneo".
-- Frase sugerida: "Definimos un SLI técnico —proporción de checkouts que responden por debajo de 1
-  segundo— y un SLI de negocio —proporción de checkouts que terminan exitosamente—, ambos contra un
+- Frase sugerida: "Definimos un SLI técnico (proporción de checkouts que responden por debajo de 1
+  segundo) y un SLI de negocio (proporción de checkouts que terminan exitosamente), ambos contra un
   SLO ilustrativo de 99.9%. Ahora mismo el error budget está casi completo porque el sistema está
   sano."
 - Ver el detalle completo de estas fórmulas en `docs/06-sli-slo-error-budget.md`.
 
-### 08:00–09:00 — Estado financiero base
+### 08:00-09:00 - Estado financiero base
 
 - Qué mostrar: pestaña B, dashboard **"F13 | Impacto en el negocio"**, fila superior: "Ingreso en
   riesgo (USD/min)", "Perdida por degradacion (USD/min)", "Perdida estimada acumulada (USD)". Si
@@ -73,7 +73,7 @@ Antes de empezar, deja abierto en el navegador (ver checklist T-2 min):
 - Plan B: si `value-exporter` aún no tiene histórico (el stack acaba de arrancar), los paneles pueden
   mostrar "No data" un momento; explica que el scrape tarda unos segundos y continúa con el guion.
 
-### 09:00–10:00 — Inyección de falla
+### 09:00-10:00 - Inyección de falla
 
 - Comando (Terminal 2):
 
@@ -95,9 +95,9 @@ Antes de empezar, deja abierto en el navegador (ver checklist T-2 min):
 - Plan B: si el comando tarda en confirmar `f13_fault_active=1`, sigue narrando mientras reintenta
   (hasta 6 intentos de 5 s); si falla del todo, revisa `docs/08-troubleshooting.md`.
 
-### 10:00–14:00 — Cascada técnica
+### 10:00-14:00 - Cascada técnica
 
-- Qué mostrar: pestaña A de nuevo — panel "Estado de la falla inyectada (f13_fault_active)" pasa a 1,
+- Qué mostrar: pestaña A de nuevo - panel "Estado de la falla inyectada (f13_fault_active)" pasa a 1,
   "Tasa de error de checkout" y "Latencia de checkout p50/p95/p99" empiezan a subir, "Throughput y
   errores de payment-service" muestra el pico de errores. Luego cambia a pestaña C (Jaeger): Service
   `payment-service`, Tags `business.payment.outcome=error`, y abre una traza de ~1.8 s.
@@ -106,9 +106,9 @@ Antes de empezar, deja abierto en el navegador (ver checklist T-2 min):
 - Plan B: si el efecto tarda en verse (ventana de 5 minutos del dashboard), reduce el rango a "Last 5
   minutes" con refresh de 5 s, o apóyate en la Terminal 1 (ventana de 1 minuto).
 
-### 14:00–17:00 — Impacto financiero en tiempo real
+### 14:00-17:00 - Impacto financiero en tiempo real
 
-- Qué mostrar: pestaña B — "Ingreso en riesgo (USD/min)" y "Perdida por degradacion (USD/min)" suben
+- Qué mostrar: pestaña B - "Ingreso en riesgo (USD/min)" y "Perdida por degradacion (USD/min)" suben
   en paralelo a la cascada técnica; el panel "Overlay: latencia p95, tasa de error e ingreso en
   riesgo" muestra las tres curvas superpuestas.
 - Frase sugerida: "Esto es lo que un dashboard técnico no te da: mientras la p95 y la tasa de error
@@ -119,7 +119,7 @@ Antes de empezar, deja abierto en el navegador (ver checklist T-2 min):
   USD/min, porque `load-generator` es un cliente secuencial y la latencia extra reduce el tráfico
   observado: buen momento para decir que "la latencia también se come el tráfico".
 
-### 17:00–18:30 — Recuperación
+### 17:00-18:30 - Recuperación
 
 - Comando (Terminal 2):
 
@@ -138,13 +138,13 @@ Antes de empezar, deja abierto en el navegador (ver checklist T-2 min):
   de consumirse y el ingreso en riesgo cae de vuelta hacia cero. La pérdida acumulada se queda: es el
   costo total del incidente."
 - Plan B: si algún panel no vuelve a 0 de inmediato, recuerda en voz alta que las ventanas móviles de
-  1–5 minutos tardan en "vaciarse" del todo; no es un error, es la ventana acelerada de demostración
+  1-5 minutos tardan en "vaciarse" del todo; no es un error, es la ventana acelerada de demostración
   (ver `docs/06-sli-slo-error-budget.md`).
 
-### 18:30–20:00 — Marco replicable y cierre
+### 18:30-20:00 - Marco replicable y cierre
 
 - Qué mostrar: slide de cierre con el repositorio `https://github.com/Edunzz/f13_demo_observabilidad_que_si_paga`.
-- Frase sugerida: "Todo lo que vieron —el modelo financiero, los dashboards, los scripts— está en este
+- Frase sugerida: "Todo lo que vieron (el modelo financiero, los dashboards, los scripts) está en este
   repositorio. Con un clic en 'Open in Codespaces' lo levantan igual que yo, sin instalar nada, y
   pueden cambiar las fórmulas y los supuestos de negocio en `.env`."
 - Cierre: agradecimiento + espacio para preguntas (10 min reservados aparte de esta demo de 20 min).
@@ -153,7 +153,7 @@ Antes de empezar, deja abierto en el navegador (ver checklist T-2 min):
 
 Versión comprimida para practicar el timing de la inyección de falla sin repetir todo el guion:
 
-1. `bash scripts/demo-reset.sh` — deja todo en estado limpio (recupera falla + resetea acumulador +
+1. `bash scripts/demo-reset.sh` - deja todo en estado limpio (recupera falla + resetea acumulador +
    smoke test).
 2. Muestra 30 s el dashboard "F13 | Impacto en el negocio" en estado sano.
 3. `bash scripts/inject-fault.sh --yes`.
@@ -192,6 +192,6 @@ Versión comprimida para practicar el timing de la inyección de falla sin repet
 
 ## Referencias
 
-- Grafana — dashboards y paneles: https://grafana.com/docs/grafana/latest/dashboards/
-- Jaeger — UI de trazas: https://www.jaegertracing.io/docs/
-- GitHub Codespaces — tiempo de inactividad: https://docs.github.com/codespaces/setting-your-user-preferences/setting-your-timeout-period-for-github-codespaces
+- Grafana - dashboards y paneles: https://grafana.com/docs/grafana/latest/dashboards/
+- Jaeger - UI de trazas: https://www.jaegertracing.io/docs/
+- GitHub Codespaces - tiempo de inactividad: https://docs.github.com/codespaces/setting-your-user-preferences/setting-your-timeout-period-for-github-codespaces

@@ -12,7 +12,7 @@ versión estable vigente. Nunca se usa la etiqueta `latest`.
 | Python (imágenes de `app/*`) | `python:3.12-slim` | Ver Dockerfiles de cada servicio en `app/` |
 | otel-collector | `otel/opentelemetry-collector-contrib:0.160.0` | Verificado en Docker Hub, septiembre 2026 |
 | Prometheus | `prom/prometheus:v3.14.0` | Verificado en Docker Hub, septiembre 2026 |
-| Jaeger | `jaegertracing/all-in-one:1.76.0` | Última release de la línea Jaeger v1 (v1 llegó a EOL el 2025-12-31; Jaeger v2 usa un modelo de configuración distinto — ver comentario en `compose.yaml`). Migración a v2 queda documentada como trabajo futuro, no se implementa en este laboratorio. |
+| Jaeger | `jaegertracing/all-in-one:1.76.0` | Última release de la línea Jaeger v1 (v1 llegó a EOL el 2025-12-31; Jaeger v2 usa un modelo de configuración distinto - ver comentario en `compose.yaml`). Migración a v2 queda documentada como trabajo futuro, no se implementa en este laboratorio. |
 | Grafana | `grafana/grafana:13.2.1` | Verificado en Docker Hub, septiembre 2026 |
 | busybox (init de `jaeger-badger-data`) | `busybox:1.36.1` | Contenedor efímero que ajusta permisos del volumen antes de que arranque Jaeger (ver `compose.yaml`, servicio `jaeger-init`) |
 

@@ -57,7 +57,7 @@ Diagrama editable: [`docs/architecture.drawio`](docs/architecture.drawio) (ábre
 
 | Servicio | Rol | Puerto en el Codespace | ¿Se abre en el navegador? |
 |---|---|---|---|
-| `load-generator` | Genera ~120 checkouts/min de forma continua | — | No |
+| `load-generator` | Genera ~120 checkouts/min de forma continua | - | No |
 | `shop-api` | API de checkout, crea la traza raíz, llama a `payment-service` | `8080` | Sí (Swagger en `/docs`) |
 | `payment-service` | Procesa el pago; aquí se inyecta la falla controlada | `127.0.0.1:8001` | No (API admin, solo terminal) |
 | `otel-collector` | Recibe OTLP de las apps y exporta trazas a Jaeger | interno (`4317`/`4318`) | No |
@@ -79,7 +79,7 @@ Cómo se arma el entorno del Codespace (devcontainer, Docker-in-Docker, puertos,
 1. **Crea el Codespace.** Haz clic en el botón **Abrir en GitHub Codespaces** de
    arriba, o en GitHub: **Code → Codespaces → Create codespace on main**. La
    máquina por defecto (2 núcleos, 8 GB) es suficiente.
-2. **Espera a que termine el arranque automático** (3–5 minutos la primera vez).
+2. **Espera a que termine el arranque automático** (3-5 minutos la primera vez).
    El devcontainer ejecuta solo:
    - `postCreateCommand` → [`scripts/setup-env.sh`](scripts/setup-env.sh): crea `.env`
      y genera los secretos (contraseña de Grafana y token admin de la falla).
@@ -115,7 +115,7 @@ Recorrido de ~40 minutos. Todos los comandos se ejecutan en la **terminal del
 Codespace** (menú ☰ → Terminal → New Terminal), desde la raíz del repo. Abre una
 segunda terminal con el botón *Split* cuando un paso lo pida.
 
-### Paso 0 — Orientación
+### Paso 0 - Orientación
 
 ```bash
 bash scripts/status.sh          # contenedores, estado de la falla y URLs
@@ -126,7 +126,7 @@ Qué observar: todos los contenedores en `running`/`healthy` (salvo
 `load-generator` y `otel-collector`, que no tienen healthcheck por diseño) y la
 falla con `"active": false`.
 
-### Paso 1 — La aplicación: una compra de punta a punta
+### Paso 1 - La aplicación: una compra de punta a punta
 
 Haz una compra a mano:
 
@@ -152,7 +152,7 @@ Mientras tanto, `load-generator` envía ~120 checkouts por minuto. Míralo traba
 docker compose logs -f --tail=5 load-generator
 ```
 
-### Paso 2 — Métricas: *qué pasó*
+### Paso 2 - Métricas: *qué pasó*
 
 Las apps exponen métricas Prometheus con prefijo `f13_`:
 
@@ -175,7 +175,7 @@ alerta ilustrativa de burn rate.
 Por qué importa: una métrica responde *qué* y *cuánto*, pero todavía no *dónde*
 ni *por qué*.
 
-### Paso 3 — Trazas: *dónde pasó*
+### Paso 3 - Trazas: *dónde pasó*
 
 Abre **Jaeger** (puerto `16686`):
 
@@ -188,7 +188,7 @@ Abre **Jaeger** (puerto `16686`):
 Por qué importa: la traza muestra el camino exacto de una compra y en qué servicio
 se fue el tiempo.
 
-### Paso 4 — Logs: *por qué pasó* (y cómo se correlacionan)
+### Paso 4 - Logs: *por qué pasó* (y cómo se correlacionan)
 
 Cada log de las apps es JSON e incluye el `trace_id` del span activo:
 
@@ -209,7 +209,7 @@ Grafana → **Explore** → datasource **Jaeger**.
 Por qué importa: métricas, trazas y logs son el insumo; la correlación por
 `trace_id` es lo que permite saltar del síntoma a la causa en segundos.
 
-### Paso 5 — SLIs, SLO y error budget
+### Paso 5 - SLIs, SLO y error budget
 
 En Grafana abre **Dashboards → F13 → "F13 | Salud tecnica"** y recorre las filas
 *Checkout*, *Pagos* y *SLIs, SLO y error budget*:
@@ -221,11 +221,11 @@ En Grafana abre **Dashboards → F13 → "F13 | Salud tecnica"** y recorre las f
 
 Con el sistema sano, el error budget está prácticamente completo.
 
-> Ventana acelerada: el laboratorio usa ventanas de 1–5 minutos para que el efecto
+> Ventana acelerada: el laboratorio usa ventanas de 1-5 minutos para que el efecto
 > se vea durante la demo; en producción un SLO se mide en ventanas de ~30 días.
 > Detalle y PromQL equivalente en [`docs/06-sli-slo-error-budget.md`](docs/06-sli-slo-error-budget.md).
 
-### Paso 6 — La capa de valor: de señales a dinero
+### Paso 6 - La capa de valor: de señales a dinero
 
 `value-exporter` lee Prometheus cada 5 s, aplica las fórmulas y publica el
 resultado como métricas nuevas:
@@ -258,7 +258,7 @@ Abre también **"F13 | Impacto en el negocio"** en Grafana. Esa es la línea bas
 ingreso en riesgo en (o muy cerca de) cero. Las fórmulas están en la
 [sección 6](#6-fórmulas-financieras).
 
-### Paso 7 — Rompe algo, de forma controlada
+### Paso 7 - Rompe algo, de forma controlada
 
 Prepara la vista:
 
@@ -283,12 +283,12 @@ Prepara la vista:
   [INFO ] Falla activa confirmada (f13_fault_active=1).
   ```
 
-Qué observar en los siguientes 30–60 segundos:
+Qué observar en los siguientes 30-60 segundos:
 
 | Señal | Antes | Durante la falla (aprox.) |
 |---|---|---|
 | Falla inyectada activa | NO | SI |
-| Latencia p95 de checkout | < 0.05 s | ~1.9–2 s (cae en el bucket 1.5–2 s del histograma) |
+| Latencia p95 de checkout | < 0.05 s | ~1.9-2 s (cae en el bucket 1.5-2 s del histograma) |
 | Tasa de error de checkout | ~0% | ~30% |
 | Ingreso en riesgo | ~0 USD/min | cientos de USD/min |
 | Pérdida por degradación | 0 USD/min | > 0 USD/min |
@@ -301,7 +301,7 @@ Qué observar en los siguientes 30–60 segundos:
 > Es una buena conversación para la charla: la latencia también se come el
 > tráfico. Detalle en [`docs/05-modelo-financiero.md`](docs/05-modelo-financiero.md).
 
-### Paso 8 — Sigue la cascada en trazas y logs
+### Paso 8 - Sigue la cascada en trazas y logs
 
 - **Jaeger**: Service `payment-service`, Tags `business.payment.outcome=error` →
   **Find Traces**. Verás spans de ~1.8 s y el resultado de error; prueba también
@@ -318,13 +318,13 @@ Qué observar en los siguientes 30–60 segundos:
   ingreso en riesgo"**: las tres curvas suben juntas. Esa es la correlación
   técnica ↔ financiera.
 
-### Paso 9 — Recupera sin reiniciar nada
+### Paso 9 - Recupera sin reiniciar nada
 
 ```bash
 bash scripts/recover.sh
 ```
 
-La falla se apaga en caliente (`f13_fault_active=0`) y, en 1–5 minutos (lo que
+La falla se apaga en caliente (`f13_fault_active=0`) y, en 1-5 minutos (lo que
 tardan en vaciarse las ventanas móviles), latencia, errores e ingreso en riesgo
 vuelven a la línea base. La **pérdida estimada acumulada se queda**: es el costo
 total del incidente. Para dejar todo en cero y repetir:
@@ -333,7 +333,7 @@ total del incidente. Para dejar todo en cero y repetir:
 bash scripts/demo-reset.sh      # recover + reset del acumulador + smoke test
 ```
 
-### Paso 10 — Haz tuyo el modelo
+### Paso 10 - Haz tuyo el modelo
 
 - **Cambia los supuestos de negocio** en `.env` (por ejemplo
   `AVERAGE_REQUEST_VALUE_USD=120`, `DEGRADED_ABANDONMENT_RATE=0.50` o
@@ -359,7 +359,7 @@ bash scripts/demo-reset.sh      # recover + reset del acumulador + smoke test
   make test
   ```
 
-### Paso 11 — Apaga
+### Paso 11 - Apaga
 
 ```bash
 docker compose down             # detiene el stack (conserva métricas y trazas)
@@ -381,10 +381,10 @@ Todos los scripts tienen `-h/--help`. `make help` lista los atajos.
 | `bash scripts/inject-fault.sh [ms] [rate] [--yes]` | `make fault` | Inyecta latencia + errores en `payment-service` |
 | `bash scripts/recover.sh` | `make recover` | Desactiva la falla sin reiniciar el stack |
 | `bash scripts/demo-reset.sh` | `make reset` | Recover + reset del acumulador financiero + smoke test |
-| `bash scripts/publish-ports.sh [--private]` | — | Puertos web en visibilidad Public (o Private) |
-| `bash scripts/setup-env.sh` | — | Crea/completa `.env` y genera secretos (idempotente) |
+| `bash scripts/publish-ports.sh [--private]` | - | Puertos web en visibilidad Public (o Private) |
+| `bash scripts/setup-env.sh` | - | Crea/completa `.env` y genera secretos (idempotente) |
 | `bash scripts/collect-diagnostics.sh` | `make diagnostics` | Empaqueta ps, logs y config sanitizada en `diagnostics/` |
-| — | `make down` / `make clean` | Detiene el stack / lo detiene y borra sus volúmenes |
+| - | `make down` / `make clean` | Detiene el stack / lo detiene y borra sus volúmenes |
 
 Guion minuto a minuto para presentarlo en vivo (20 min), con plan B y checklist:
 [`docs/04-guion-demo-20-min.md`](docs/04-guion-demo-20-min.md).
@@ -430,7 +430,7 @@ Ver [`docs/08-troubleshooting.md`](docs/08-troubleshooting.md). Los tres más co
 | Síntoma | Qué hacer |
 |---|---|
 | El Codespace abrió pero no hay URLs | `bash scripts/status.sh`; si no hay contenedores, `bash scripts/lab-up.sh` |
-| Grafana muestra "No data" recién arrancado | Espera 1–2 ciclos de scrape (5 s); si persiste, `docker compose logs --tail=50 value-exporter` |
+| Grafana muestra "No data" recién arrancado | Espera 1-2 ciclos de scrape (5 s); si persiste, `docker compose logs --tail=50 value-exporter` |
 | La URL pide login de GitHub | El puerto quedó privado: `bash scripts/publish-ports.sh` (o pestaña PORTS → Port Visibility → Public) |
 
 Para reportar un problema: `bash scripts/collect-diagnostics.sh` y adjunta el

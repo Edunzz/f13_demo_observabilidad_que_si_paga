@@ -81,6 +81,6 @@ funcionando con puertos privados.
 
 - Port forwarding y visibilidad en Codespaces: https://docs.github.com/codespaces/developing-in-a-codespace/forwarding-ports-in-your-codespace
 - Restringir la visibilidad de puertos en una organización: https://docs.github.com/codespaces/managing-codespaces-for-your-organization/restricting-the-visibility-of-forwarded-ports
-- Grafana — autenticación anónima: https://grafana.com/docs/grafana/latest/setup-grafana/configure-security/configure-authentication/grafana/#anonymous-authentication
-- Prometheus — flags de línea de comandos (`--web.enable-lifecycle`): https://prometheus.io/docs/prometheus/latest/command-line/prometheus/
-- Docker — seguridad de contenedores: https://docs.docker.com/engine/security/
+- Grafana - autenticación anónima: https://grafana.com/docs/grafana/latest/setup-grafana/configure-security/configure-authentication/grafana/#anonymous-authentication
+- Prometheus - flags de línea de comandos (`--web.enable-lifecycle`): https://prometheus.io/docs/prometheus/latest/command-line/prometheus/
+- Docker - seguridad de contenedores: https://docs.docker.com/engine/security/

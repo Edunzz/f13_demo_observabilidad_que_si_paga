@@ -1,4 +1,4 @@
-# Validación — criterios de aceptación y evidencia
+# Validación - criterios de aceptación y evidencia
 
 Este documento define qué significa que el laboratorio F13 "funciona" en GitHub Codespaces y dónde
 queda la evidencia. No contiene secretos ni datos sensibles.
@@ -57,9 +57,9 @@ bash scripts/demo-reset.sh        # recover + acumulador en 0 + smoke test
 
 ## Historial
 
-- **2026-09-13** — validación end-to-end sobre una VM de Azure (despliegue con `infra/azure/` y
+- **2026-09-13** - validación end-to-end sobre una VM de Azure (despliegue con `infra/azure/` y
   orquestación por SSH), commit `64c9708`. Esa ruta de despliegue se retiró al pasar el laboratorio a
   GitHub Codespaces; el detalle sigue disponible en el historial de Git (`git show 2b812c2:docs/validation.md`).
-- **2026-10-06** — el laboratorio pasa a levantarse completo en GitHub Codespaces (devcontainer con
+- **2026-10-06** - el laboratorio pasa a levantarse completo en GitHub Codespaces (devcontainer con
   Docker-in-Docker, scripts locales sin SSH, puertos web publicados en HTTP). La validación queda a cargo
   de los jobs *Stack E2E* y *Devcontainer de Codespaces* del workflow `validate`.

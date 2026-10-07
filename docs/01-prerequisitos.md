@@ -54,6 +54,6 @@ Siguiente: [`02-codespaces.md`](02-codespaces.md).
 
 ## Referencias
 
-- GitHub Codespaces — documentación: https://docs.github.com/codespaces
+- GitHub Codespaces - documentación: https://docs.github.com/codespaces
 - Facturación de Codespaces (cuota incluida y precios): https://docs.github.com/billing/managing-billing-for-your-products/managing-billing-for-github-codespaces/about-billing-for-github-codespaces
 - Políticas de organización para Codespaces (visibilidad de puertos): https://docs.github.com/codespaces/managing-codespaces-for-your-organization/restricting-the-visibility-of-forwarded-ports

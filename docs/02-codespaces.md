@@ -32,7 +32,7 @@ son los del propio Codespace. Así el mismo `compose.yaml` sirve para el Codespa
 | Al crear el Codespace (una vez) | `postCreateCommand` | `scripts/setup-env.sh` | Crea `.env` desde `.env.example`, genera secretos y ajusta `GF_SERVER_ROOT_URL` a la URL del Codespace |
 | Cada vez que el Codespace arranca | `postStartCommand` | `scripts/lab-up.sh` | Espera a Docker, `docker compose up -d --build`, espera healthchecks, smoke test, publica los puertos web e imprime URLs |
 
-La primera vez tarda 3–5 minutos (descarga de imágenes y build de las 4 apps). Los arranques
+La primera vez tarda 3-5 minutos (descarga de imágenes y build de las 4 apps). Los arranques
 siguientes reutilizan las imágenes y tardan menos de un minuto.
 
 El resultado del `postStartCommand` aparece en una terminal del Codespace. Si la cerraste o quieres
@@ -52,8 +52,8 @@ Si algo falló, vuelve a correr `bash scripts/lab-up.sh`: es idempotente.
 | `16686` | Jaeger UI | *Jaeger (trazas)* | Public |
 | `9090` | Prometheus | *Prometheus (PromQL)* | Public |
 | `8080` | shop-api (Swagger en `/docs`) | *shop-api (Swagger en /docs)* | Public |
-| `8001` | API admin de `payment-service` | — | No se reenvía |
-| `9200` | API admin y `/metrics` de `value-exporter` | — | No se reenvía |
+| `8001` | API admin de `payment-service` | - | No se reenvía |
+| `9200` | API admin y `/metrics` de `value-exporter` | - | No se reenvía |
 
 - Los servicios hablan **HTTP plano**; no hay TLS en el laboratorio.
 - La URL de cada puerto tiene la forma `<codespace>-<puerto>.app.github.dev`. Es el proxy de port

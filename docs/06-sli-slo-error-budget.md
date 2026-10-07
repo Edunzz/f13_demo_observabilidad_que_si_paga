@@ -63,7 +63,7 @@ consumed_ratio ≈ 0.30 / 0.001 = 300  →  se acota (clamp) a "presupuesto agot
 ```
 
 Este comportamiento es intencional para la demo: con un SLO de 99.9% y una falla que produce 30% de
-error, el error budget se agota en segundos, no en horas — precisamente porque estamos usando una
+error, el error budget se agota en segundos, no en horas - precisamente porque estamos usando una
 **ventana acelerada de demostración** (ver siguiente sección), no una ventana de producción de 30
 días.
 
@@ -91,7 +91,7 @@ laboratorio no despliega Alertmanager**, por lo que la regla nunca envía una no
 | Riesgo de usar la ventana corta en producción | El error budget se agota/reponerse de forma artificialmente rápida ante picos cortos; no refleja el comportamiento real del servicio a lo largo del mes | N/A (es el enfoque recomendado) |
 
 Es fundamental declarar esto en voz alta durante la demo (ver `docs/04-guion-demo-20-min.md`, sección
-05:00–08:00): la ventana corta existe **solo para que el público vea el efecto en 20 minutos**, no
+05:00-08:00): la ventana corta existe **solo para que el público vea el efecto en 20 minutos**, no
 porque sea la práctica recomendada para gestionar un SLO real.
 
 ### Ejemplo de consulta PromQL equivalente para 30 días (no usada en vivo)
@@ -132,8 +132,8 @@ Google SRE:
 
 ## Referencias
 
-- Google SRE — sitio oficial: https://sre.google
-- Google SRE Book — Service Level Objectives: https://sre.google/sre-book/service-level-objectives/
-- Google SRE Workbook — Alerting on SLOs: https://sre.google/workbook/alerting-on-slos/
-- Prometheus — `rate()` y `histogram_quantile()`: https://prometheus.io/docs/prometheus/latest/querying/functions/
-- Prometheus — reglas de grabación (recording rules): https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/
+- Google SRE - sitio oficial: https://sre.google
+- Google SRE Book - Service Level Objectives: https://sre.google/sre-book/service-level-objectives/
+- Google SRE Workbook - Alerting on SLOs: https://sre.google/workbook/alerting-on-slos/
+- Prometheus - `rate()` y `histogram_quantile()`: https://prometheus.io/docs/prometheus/latest/querying/functions/
+- Prometheus - reglas de grabación (recording rules): https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/
